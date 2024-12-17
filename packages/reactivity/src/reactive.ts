@@ -1,27 +1,8 @@
 import { isObject } from "@vue/shared";
+import { ReactiveFlags, mutableHandlers } from "./baseHandler";
 
 // 记录处理过的后果，以便复用，key值为target对象
-const reactiveMap = new WeakMap()
-enum ReactiveFlags {
-  IS_REACTIVE = "__v_isReactive" //基本上唯一
-}
-
-// reactive / shallowReactive
-const mutableHandlers: ProxyHandler<any> = {
-  get(target, key, recevier) {
-    if (key === ReactiveFlags.IS_REACTIVE) {
-      return true
-    }
-    return target[key]
-  },
-  set(target, key, value, recevier) {
-    return true
-  }
-}
-
-export function reactive(target) {
-  return createReactiveObject(target);
-}
+const reactiveMap = new WeakMap();
 
 function createReactiveObject(target) {
   // 必须是对象
@@ -43,5 +24,9 @@ function createReactiveObject(target) {
   // 根据对象缓存处理后的结果
   reactiveMap.set(target, proxy);
 
-  return proxy
+  return proxy;
+}
+
+export function reactive(target) {
+  return createReactiveObject(target);
 }

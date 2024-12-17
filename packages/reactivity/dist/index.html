@@ -19,10 +19,10 @@
     import { reactive, effect } from './reactivity.js';
 
     const obj = { name: '欧兹', age: 2010 };
-    const state1 = reactive(obj);
-    const state2 = reactive(state1);
+    const state = reactive(obj);
 
-    console.log(state1 === state2);
+    app.innerHTML = state.name + state.age
+    console.log(state.name, state.age);
     
     
   </script>
