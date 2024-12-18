@@ -1,0 +1,16 @@
+let lastEffect(非全局) = activeEffect;
+activeEffect(全局) = this;
+activeEffect = lastEffect
+
+let lastEffect(f1内) = undefined
+activeEffect = f1
+
+let lastEffect(f2内) = f1
+activeEffect = f2
+activeEffect = f1
+
+let lastEffect(f3内) = f1
+activeEffect = f3
+activeEffect = f1
+
+activeEffect = undefined

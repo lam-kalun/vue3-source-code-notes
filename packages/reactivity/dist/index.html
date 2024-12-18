@@ -21,8 +21,13 @@
     const obj = { name: '欧兹', age: 2010 };
     const state = reactive(obj);
 
-    app.innerHTML = state.name + state.age
-    console.log(state.name, state.age);
+    effect(() => {
+      app.innerHTML = `姓名：${state.name}、 年龄：${state.age}`;      
+    })
+
+    setTimeout(() => {
+      state.age++ // 数据变化后，effect重新执行
+    }, 1000);
     
     
   </script>
