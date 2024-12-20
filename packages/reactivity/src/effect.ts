@@ -14,7 +14,10 @@ export function effect(fn, options?) {
 
 export let activeEffect;
 class ReactiveEffect {
-  public active = true // 创建的effect是响应式的
+  public active = true; // 创建的effect是响应式的
+  _trackId = 0; // 用于记录当前effect执行了几次
+  deps = []; // 收集当前effect收集了多少个属性的dep
+  _depsLength = 0;
   
   // 如果fn中依赖的数据发生变化，需求重新调用run
   constructor(public fn, public scheduler) {}
@@ -28,9 +31,14 @@ class ReactiveEffect {
     let lastEffect = activeEffect;
     try {
       activeEffect = this;
-      return this.fn(); // 便于触发get时，key与activeEffect（实例）对应，收集依赖
+      return this.fn(); // 便于第一次触发run时，key与activeEffect（实例）对应，收集依赖
     }finally {
       activeEffect = lastEffect;
     }
   }
+}
+
+export function trackEffect(effect, dep) {
+  dep.set(effect, effect._trackId);
+  effect.deps[effect._depsLength++] = dep
 }
