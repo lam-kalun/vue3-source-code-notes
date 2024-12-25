@@ -25,11 +25,12 @@
       app.innerHTML = `姓名：${state.name}、 年龄：${state.age}`;      
     })
 
-    effect(() => {
-      app.innerHTML = `姓名：${state.name}`;      
-    })
+    // effect(() => {
+    //   app.innerHTML = `姓名：${state.name}`;      
+    // })
 
     setTimeout(() => {
+      state.name = 'Fourze'
       state.age++ // 数据变化后，effect重新执行
     }, 1000);
     

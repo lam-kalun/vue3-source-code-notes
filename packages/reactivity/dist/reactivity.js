@@ -24,7 +24,7 @@ var ReactiveEffect = class {
     this._trackId = 0;
     // 用于记录当前effect执行了几次
     this.deps = [];
-    // 收集当前effect收集了多少个属性的dep
+    // 收集当前effect内的属性（如name、age）收集了多少个属性的dep
     this._depsLength = 0;
   }
   run() {
@@ -43,6 +43,11 @@ var ReactiveEffect = class {
 function trackEffect(effect2, dep) {
   dep.set(effect2, effect2._trackId);
   effect2.deps[effect2._depsLength++] = dep;
+}
+function triggerEffects(dep) {
+  for (const effect2 of dep.keys()) {
+    effect2.scheduler();
+  }
 }
 
 // packages/reactivity/src/reactiveEffect.ts
@@ -65,8 +70,19 @@ function track(target, key) {
       }));
     }
     trackEffect(activeEffect, dep);
-    console.log(targetMap, activeEffect);
+    console.log(targetMap);
   }
+}
+function trigger(target, key, value, oldValue) {
+  const depsMap = targetMap.get(target);
+  if (!depsMap) {
+    return;
+  }
+  const dep = depsMap.get(key);
+  if (!dep) {
+    return;
+  }
+  triggerEffects(dep);
 }
 
 // packages/reactivity/src/baseHandler.ts
@@ -79,7 +95,12 @@ var mutableHandlers = {
     return Reflect.get(target, key, recevier);
   },
   set(target, key, value, recevier) {
-    return Reflect.set(target, key, value, recevier);
+    const oldValue = target[key];
+    const result = Reflect.set(target, key, value, recevier);
+    if (oldValue !== value) {
+      trigger(target, key, value, oldValue);
+    }
+    return result;
   }
 };
 
@@ -107,6 +128,7 @@ export {
   activeEffect,
   effect,
   reactive,
-  trackEffect
+  trackEffect,
+  triggerEffects
 };
 //# sourceMappingURL=reactivity.js.map
