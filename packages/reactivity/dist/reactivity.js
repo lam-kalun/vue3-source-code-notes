@@ -100,6 +100,7 @@ function track(target, key) {
       }));
     }
     trackEffect(activeEffect, dep);
+    console.log(targetMap);
   }
 }
 function trigger(target, key, value, oldValue) {
