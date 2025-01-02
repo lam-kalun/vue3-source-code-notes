@@ -1,6 +1,6 @@
-import { activeEffect, trackEffect, triggerEffects } from './effect'
+import { activeEffect, trackEffect, triggerEffects } from './effect';
 
-const targetMap = new WeakMap()
+const targetMap = new WeakMap();
 
 function createDep(cleanup) {
   let dep = new Map() as any;
@@ -24,7 +24,7 @@ export function track(target, key) {
     
     // 将当前的effect放入到dep(影射表)中，后续可以根据值的变化触发此dep中存放的effect
     trackEffect(activeEffect, dep);
-    console.log(targetMap);
+    // console.log(targetMap);
   }
 }
 
@@ -32,12 +32,12 @@ export function trigger(target, key, value, oldValue) {
   const depsMap = targetMap.get(target)
   // 对象没有出现在effect上
   if (!depsMap) {
-    return
+    return;
   }
-  const dep = depsMap.get(key)
+  const dep = depsMap.get(key);
   // 对象该属性没有出现在effect上
   if (!dep) {
-    return
+    return;
   }
 
   // 修改属性对应effect

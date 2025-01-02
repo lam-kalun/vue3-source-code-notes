@@ -13,10 +13,27 @@ export function effect(fn, options?) {
 }
 
 export let activeEffect;
+
+function preCleanEffect(effect) {
+  effect._depsLength = 0;
+  effect._trackId++; // 每次执行id + 1, 如果当前同一个effect执行，id是相同的
+}
+
+function postCleanEffect(effect) {
+  if (effect.deps.length > effect._depsLength) {
+    // 删除依赖列表中，多余的属性对应的映射（effect.deps[i]）中，对当前effect的记录
+    for (let i = effect._depsLength; i < effect.deps.length; i++) {
+      cleanDepEffect(effect.deps[i], effect);
+    }
+
+    // 更新依赖列表
+    effect.deps.length = effect._depsLength;
+  }
+}
 class ReactiveEffect {
   public active = true; // 创建的effect是响应式的
   _trackId = 0; // 用于记录当前effect执行了几次
-  deps = []; // 收集当前effect内的属性（如name、age）收集了多少个属性的dep
+  deps = []; // 收集当前effect内的属性（如name、age）所对应的dep
   _depsLength = 0;
   
   // 如果fn中依赖的数据发生变化，需求重新调用run
@@ -31,16 +48,49 @@ class ReactiveEffect {
     let lastEffect = activeEffect;
     try {
       activeEffect = this;
-      return this.fn(); // 便于第一次触发run时，key与activeEffect（实例）对应，收集依赖
-    }finally {
+      preCleanEffect(this); // 每次执行effect时调用
+      // 便于第一次触发run时，key与activeEffect（实例）对应，收集依赖
+      // 属性修改后，先触发属性修改的set，再触发effect里属性的get，代码（finally）再往下走
+      return this.fn();
+    } finally {
+      postCleanEffect(this); // 清除多余的deps项
       activeEffect = lastEffect;
     }
   }
 }
 
+function cleanDepEffect(dep, effect) {
+  dep.delete(effect);
+  // 如果dep里没有effect了，把对象对应的depsMap里，对应的属性dep去掉
+  if (dep.size === 0) {
+    dep.cleanup();
+  }
+}
+
 export function trackEffect(effect, dep) {
-  dep.set(effect, effect._trackId);
-  effect.deps[effect._depsLength++] = dep;
+  // 双向记忆
+  // 一次effect执行里，同一个属性不记录多次了
+  // 比如effect(() => {app.innerHTML = `${state.name}${state.name}${state.name}`})
+  if (dep.get(effect) !== effect._trackId) {
+    dep.set(effect, effect._trackId);
+
+    // 取effect记录的deps，来和dep做比较(如果effect里依赖的属性没变，dep触发记录的顺序会和deps里一样)
+    // 比如deps = [flag, name], dep = flag
+    const oldDep = effect.deps[effect._depsLength];
+    if (oldDep !== dep) {
+      // 不一致，就把deps当前项替换为dep
+      effect.deps[effect._depsLength++] = dep;
+
+      // 同时把去掉的deps当前项，其dep里记录的当前effect去掉
+      // 首次执行effect时，deps首次入值，_depsLength位置对应的oldDep当然为空
+      if (oldDep) {
+        cleanDepEffect(oldDep, effect);
+      }
+    } else {
+      // 如果一致，就不动deps当前项，跳过
+      effect._depsLength++;
+    }
+  }
 }
 
 export function triggerEffects(dep) {
