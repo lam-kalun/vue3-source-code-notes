@@ -10,6 +10,7 @@ function createReactiveObject(target) {
     return target;
   }
 
+  // target对象已经是reactive了
   if (target[ReactiveFlags.IS_REACTIVE]) {
     return target;
   }
@@ -29,4 +30,8 @@ function createReactiveObject(target) {
 
 export function reactive(target) {
   return createReactiveObject(target);
+}
+
+export function toReactive(value) {
+  return isObject(value) ? reactive(value) : value;
 }

@@ -2,7 +2,7 @@ import { activeEffect, trackEffect, triggerEffects } from './effect';
 
 const targetMap = new WeakMap();
 
-function createDep(cleanup) {
+export function createDep(cleanup) {
   let dep = new Map() as any;
   dep.cleanup = cleanup;
   return dep;
