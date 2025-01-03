@@ -48,22 +48,30 @@
     //   state.name = 'Fourze';
     // }, 1000);
 
-    const runner = effect(
-      () => {
-        app.innerHTML = `姓名：${state.name}、 年龄：${state.age}`;
-      },
-      {
-        scheduler: () => {
-          console.log('数据更新了，不重新渲染，走自己的逻辑');
-          runner();
-        }
-      }
-    );
+    // effect自定义调度
+    // const runner = effect(
+    //   () => {
+    //     app.innerHTML = `姓名：${state.name}、 年龄：${state.age}`;
+    //   },
+    //   {
+    //     scheduler: () => {
+    //       console.log('数据更新了，不重新渲染，走自己的逻辑');
+    //       runner();
+    //     }
+    //   }
+    // );
 
-    setTimeout(() => {
-      state.name = 'Fourze';
-      state.age++; // 数据变化后，effect重新执行
-    }, 1000);
+    // setTimeout(() => {
+    //   state.name = 'Fourze';
+    //   state.age++; // 数据变化后，effect重新执行
+    // }, 1000);
+
+
+    // 嵌套循环
+    effect(() => {
+      app.innerHTML = `姓名：${state.name}`;
+      state.name = Math.random()
+    });
     
     
   </script>

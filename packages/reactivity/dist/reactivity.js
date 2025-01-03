@@ -32,6 +32,7 @@ function postCleanEffect(effect2) {
   }
 }
 var ReactiveEffect = class {
+  // 收集当前effect内的属性（如name、age）所对应的dep
   // 如果fn中依赖的数据发生变化，需求重新调用run
   constructor(fn, scheduler) {
     this.fn = fn;
@@ -40,9 +41,10 @@ var ReactiveEffect = class {
     // 创建的effect是响应式的
     this._trackId = 0;
     // 用于记录当前effect执行了几次
-    this.deps = [];
-    // 收集当前effect内的属性（如name、age）所对应的dep
     this._depsLength = 0;
+    this._running = 0;
+    // 正在执行时不为0
+    this.deps = [];
   }
   run() {
     if (!this.active) {
@@ -52,8 +54,10 @@ var ReactiveEffect = class {
     try {
       activeEffect = this;
       preCleanEffect(this);
+      this._running++;
       return this.fn();
     } finally {
+      this._running--;
       postCleanEffect(this);
       activeEffect = lastEffect;
     }
@@ -81,7 +85,11 @@ function trackEffect(effect2, dep) {
 }
 function triggerEffects(dep) {
   for (const effect2 of dep.keys()) {
-    effect2.scheduler();
+    if (effect2._running === 0) {
+      if (effect2.scheduler) {
+        effect2.scheduler();
+      }
+    }
   }
 }
 
