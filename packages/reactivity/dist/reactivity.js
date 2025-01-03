@@ -12,6 +12,11 @@ function effect(fn, options) {
     }
   );
   _effect.run();
+  if (options) {
+    Object.assign(_effect, options);
+  }
+  const runner = _effect.run.bind(_effect);
+  return runner;
 }
 var activeEffect;
 function preCleanEffect(effect2) {
@@ -100,7 +105,6 @@ function track(target, key) {
       }));
     }
     trackEffect(activeEffect, dep);
-    console.log(targetMap);
   }
 }
 function trigger(target, key, value, oldValue) {

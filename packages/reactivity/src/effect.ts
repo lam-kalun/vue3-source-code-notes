@@ -10,6 +10,13 @@ export function effect(fn, options?) {
     }
   );
   _effect.run();
+
+  // 比如用scheduler覆盖ReactiveEffect里的scheduler，让更新后，执行传进来的scheduler
+  if (options) {
+    Object.assign(_effect, options);
+  }
+  const runner = _effect.run.bind(_effect);
+  return runner;
 }
 
 export let activeEffect;
