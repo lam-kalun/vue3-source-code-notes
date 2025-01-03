@@ -12,6 +12,7 @@ export function effect(fn, options?) {
   _effect.run();
 
   // 比如用scheduler覆盖ReactiveEffect里的scheduler，让更新后，执行传进来的scheduler
+  // 首次执行effect，还是会执行ReactiveEffect里的scheduler
   if (options) {
     Object.assign(_effect, options);
   }
