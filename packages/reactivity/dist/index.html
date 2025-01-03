@@ -18,8 +18,15 @@
     // 自己的
     import { reactive, effect } from './reactivity.js';
 
-    const obj = { name: '欧兹', age: 2010, flag: true };
+    // 递归代理，和用到其属性的effect关联
+    const obj = { name: '欧兹', age: 2010, flag: true, address: { n: 1 } };
     const state = reactive(obj);
+    effect(() => {
+      app.innerHTML = state.address.n;
+    })
+    setTimeout(() => {
+      state.address.n = 2;
+    }, 1000);
 
     // 修改一个属性后，先触发set触发effect.run，再触发get收集映射，代码再往下走（如修改另一个属性）
     // effect(() => {
@@ -27,7 +34,7 @@
     // });
 
     // effect(() => {
-    //   app.innerHTML = `姓名：${state.name}`;      
+    //   app.innerHTML = `姓名：${state.name}`;
     // });
 
     // setTimeout(() => {
@@ -68,10 +75,10 @@
 
 
     // 嵌套循环
-    effect(() => {
-      app.innerHTML = `姓名：${state.name}`;
-      state.name = Math.random()
-    });
+    // effect(() => {
+    //   app.innerHTML = `姓名：${state.name}`;
+    //   state.name = Math.random()
+    // });
     
     
   </script>
