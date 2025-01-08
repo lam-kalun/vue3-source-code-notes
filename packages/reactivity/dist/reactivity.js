@@ -190,16 +190,19 @@ var RefImpl = class {
     return this._value;
   }
   set value(newValue) {
-    trigger2(this);
     if (newValue !== this.rawValue) {
       this.rawValue = newValue;
       this._value = newValue;
+      trigger2(this);
     }
   }
 };
 function track2(ref2) {
   if (activeEffect) {
-    trackEffect(activeEffect, ref2.dep = createDep(() => ref2.dep = void 0));
+    if (!ref2.dep) {
+      ref2.dep = createDep(() => ref2.dep = void 0);
+    }
+    trackEffect(activeEffect, ref2.dep);
   }
 }
 function trigger2(ref2) {

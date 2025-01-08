@@ -18,9 +18,17 @@
     // 自己的
     import { reactive, effect, ref } from './reactivity.js';
     // effect例子笔记
-    import './effectNotes.js'
+    // import './effectNotes.js';
+    const flag = ref(true);
     
     
+    effect(() => {
+      app.innerHTML = flag.value ? 'decade' : 'diend';
+    });
+
+    setTimeout(() => {
+      flag.value = false;
+    }, 1000);
   </script>
 </body>
 </html>
