@@ -27,7 +27,7 @@ class RefImpl {
     if (newValue !== this.rawValue) {
       this.rawValue = newValue;
       this._value = newValue;
-      // his._value值变化后，再触发trigger
+      // this._value值变化后，再触发trigger
       // 不然触发trigger后，再触发effect.run时会触发get重新收集依赖后，返回的就是旧值
       trigger(this);
     }
@@ -39,7 +39,7 @@ function track(ref) {
   // 触发get时，有activeEffect这个属性，说明这个被包裹的属性，是在effect中运行的
   if (activeEffect) {
     if (!ref.dep) {
-      ref.dep = createDep(() => ref.dep = undefined );
+      ref.dep = createDep(() => ref.dep = undefined);
     }
     trackEffect(activeEffect, ref.dep);
   }

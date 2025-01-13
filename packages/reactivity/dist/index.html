@@ -10,25 +10,42 @@
 
   <script type="module">
     // 原生的
-    // import {
-    //   reactive,
-    //   effect,
-    // } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js';
+    import {
+      reactive,
+      effect,
+      ref,
+      toRef
+    } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js';
 
     // 自己的
-    import { reactive, effect, ref } from './reactivity.js';
+    // import { reactive, effect, ref } from './reactivity.js';
     // effect例子笔记
     // import './effectNotes.js';
-    const flag = ref(true);
+
+    // ref例子笔记
+    // const flag = ref(true);
     
-    
+    // effect(() => {
+    //   app.innerHTML = flag.value ? 'decade' : 'diend';
+    // });
+
+    // setTimeout(() => {
+    //   flag.value = false;
+    // }, 1000);
+
+
+    // toRef，不影响原proxy响应式
+    const state = reactive({name: '欧兹', age: 2010});
+
     effect(() => {
-      app.innerHTML = flag.value ? 'decade' : 'diend';
+      app.innerHTML = state.name
     });
 
+    const name = toRef(state, 'name')
+
     setTimeout(() => {
-      flag.value = false;
-    }, 1000);
+      name.value = 'Fourze'
+    }, 1000)
   </script>
 </body>
 </html>

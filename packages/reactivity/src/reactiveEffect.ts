@@ -29,7 +29,7 @@ export function track(target, key) {
 }
 
 export function trigger(target, key, value, oldValue) {
-  const depsMap = targetMap.get(target)
+  const depsMap = targetMap.get(target);
   // 对象没有出现在effect上
   if (!depsMap) {
     return;
