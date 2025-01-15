@@ -10,15 +10,15 @@
 
   <script type="module">
     // 原生的
-    import {
-      reactive,
-      effect,
-      ref,
-      toRef
-    } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js';
+    // import {
+    //   reactive,
+    //   effect,
+    //   ref,
+    //   toRef
+    // } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js';
 
     // 自己的
-    // import { reactive, effect, ref } from './reactivity.js';
+    import { reactive, effect, ref, toRef, toRefs } from './reactivity.js';
     // effect例子笔记
     // import './effectNotes.js';
 
@@ -34,17 +34,35 @@
     // }, 1000);
 
 
+    // proxy本质是对象，可以用来解构，但是解构后会失去响应式
+    // const state = ref({name: '欧兹', age: 2010});
+    // const {name, age} = state.value;
+    // console.log(state.value, name, age);
+
+
     // toRef，不影响原proxy响应式
+    // const state = reactive({name: '欧兹', age: 2010});
+
+    // effect(() => {
+    //   app.innerHTML = state.name;
+    // });
+
+    // const name = toRef(state, 'name');
+
+    // setTimeout(() => {
+    //   name.value = 'Fourze';
+    // }, 1000)
+
+
+    // toRefs，解构reactive
     const state = reactive({name: '欧兹', age: 2010});
-
     effect(() => {
-      app.innerHTML = state.name
+      app.innerHTML = `姓名：${state.name}、 年龄：${state.age}`;
     });
-
-    const name = toRef(state, 'name')
-
+    const {name, age} = toRefs(state);
     setTimeout(() => {
-      name.value = 'Fourze'
+      name.value = 'Fourze';
+      age.value = 2011;
     }, 1000)
   </script>
 </body>

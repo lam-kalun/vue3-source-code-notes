@@ -213,12 +213,36 @@ function trigger2(ref2) {
 function ref(value) {
   return createRef(value);
 }
+function toRef(object, key) {
+  return new ObjectRefImpl(object, key);
+}
+var ObjectRefImpl = class {
+  constructor(_object, _key) {
+    this._object = _object;
+    this._key = _key;
+  }
+  get value() {
+    return this._object[this._key];
+  }
+  set value(newValue) {
+    this._object[this._key] = newValue;
+  }
+};
+function toRefs(object) {
+  const res = {};
+  for (const key in object) {
+    res[key] = toRef(object, key);
+  }
+  return res;
+}
 export {
   activeEffect,
   effect,
   reactive,
   ref,
   toReactive,
+  toRef,
+  toRefs,
   trackEffect,
   triggerEffects
 };

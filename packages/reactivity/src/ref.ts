@@ -24,6 +24,7 @@ class RefImpl {
 
   set value(newValue) {
     // 触发当前被包裹属性所映射的effect
+    // 相同值不会触发effect(也很明显了)
     if (newValue !== this.rawValue) {
       this.rawValue = newValue;
       this._value = newValue;
@@ -53,4 +54,29 @@ function trigger(ref) {
 
 export function ref(value) {
   return createRef(value);
+}
+
+export function toRef(object, key) {
+  return new ObjectRefImpl(object, key);
+}
+
+class ObjectRefImpl {
+  constructor(public _object, public _key) {}
+
+  get value() {
+    return this._object[this._key];
+  }
+
+  set value(newValue) {
+    this._object[this._key] = newValue;
+  }
+}
+
+// 大多用于解构reactive
+export function toRefs(object) {
+  const res = {};
+  for ( const key in object ) {
+    res[key] = toRef(object, key);
+  }
+  return res;
 }

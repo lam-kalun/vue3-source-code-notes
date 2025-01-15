@@ -36,6 +36,7 @@ export const mutableHandlers: ProxyHandler<any> = {
     // target[key]值变化后，再触发trigger
     // 不然触发trigger后，再触发effect.run时会触发get重新收集依赖后，返回的就是旧值
     const result = Reflect.set(target, key, value, recevier);
+    // 相同值不会触发effect(也很明显了)
     if (oldValue !== value) {
       trigger(target, key, value, oldValue);
     }
