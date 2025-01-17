@@ -129,20 +129,20 @@ function trigger(target, key, value, oldValue) {
 
 // packages/reactivity/src/baseHandler.ts
 var mutableHandlers = {
-  get(target, key, recevier) {
+  get(target, key, receiver) {
     if (key === "__v_isReactive" /* IS_REACTIVE */) {
       return true;
     }
     track(target, key);
-    const res = Reflect.get(target, key, recevier);
+    const res = Reflect.get(target, key, receiver);
     if (isObject(res)) {
       return reactive(res);
     }
     return res;
   },
-  set(target, key, value, recevier) {
+  set(target, key, value, receiver) {
     const oldValue = target[key];
-    const result = Reflect.set(target, key, value, recevier);
+    const result = Reflect.set(target, key, value, receiver);
     if (oldValue !== value) {
       trigger(target, key, value, oldValue);
     }
@@ -220,7 +220,14 @@ var ObjectRefImpl = class {
   constructor(_object, _key) {
     this._object = _object;
     this._key = _key;
+    this.__v_isRef = true;
   }
+  // 先简单理解，这里不用Reflect的原因是传进来的_object是响应式，已做过track
+  // 而new Proxy时，传入的target不是响应式的，直接target[key]不会触发get
+  // new Proxy时使用Reflect，是因为其get是返回的proxy对象获取时才会触发，
+  // 而原对象里有getter，getter里的this不会触发proxy对象的get，会漏收集track，
+  // 这里如果_object里有getter，也不会触发这里的get，只会触发proxy监听里的get，
+  // 但是这里不用收集track，不触发也无所谓
   get value() {
     return this._object[this._key];
   }
@@ -235,9 +242,30 @@ function toRefs(object) {
   }
   return res;
 }
+function proxyRefs(objectWithRefs) {
+  if (objectWithRefs["__v_isReactive" /* IS_REACTIVE */]) {
+    return objectWithRefs;
+  }
+  return new Proxy(objectWithRefs, {
+    get(target, key, receiver) {
+      const res = Reflect.get(target, key, receiver);
+      return res.__v_isRef ? res.value : res;
+    },
+    set(target, key, value, receiver) {
+      const oldValue = target[key];
+      if (oldValue.__v_isRef && !value.__v_isRef) {
+        oldValue.value = value;
+        return true;
+      } else {
+        return Reflect.set(target, key, value, receiver);
+      }
+    }
+  });
+}
 export {
   activeEffect,
   effect,
+  proxyRefs,
   reactive,
   ref,
   toReactive,

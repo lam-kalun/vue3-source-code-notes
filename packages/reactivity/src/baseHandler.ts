@@ -8,7 +8,7 @@ export enum ReactiveFlags {
 
 // proxy 需要搭配Reflect使用
 export const mutableHandlers: ProxyHandler<any> = {
-  get(target, key, recevier) { 
+  get(target, key, receiver) { 
     if (key === ReactiveFlags.IS_REACTIVE) {
       return true;
     }
@@ -16,7 +16,8 @@ export const mutableHandlers: ProxyHandler<any> = {
     // 收集这个对象上的属性，和用到其属性的effect关联起来
     track(target, key);
     // 不用target[key]理由: /question-1.ts
-    const res = Reflect.get(target, key, recevier);
+    // receiver为getter调用时的this值
+    const res = Reflect.get(target, key, receiver);
 
     // 当取值也是对象时，递归代理，和用到其属性的effect关联
     if (isObject(res)) {
@@ -30,12 +31,13 @@ export const mutableHandlers: ProxyHandler<any> = {
     return res;
   },
 
-  set(target, key, value, recevier) {
+  set(target, key, value, receiver) {
     // 找到属性，让对应effect重新执行
     const oldValue = target[key];
     // target[key]值变化后，再触发trigger
     // 不然触发trigger后，再触发effect.run时会触发get重新收集依赖后，返回的就是旧值
-    const result = Reflect.set(target, key, value, recevier);
+    // receiver为setter调用时的this值
+    const result = Reflect.set(target, key, value, receiver);
     // 相同值不会触发effect(也很明显了)
     if (oldValue !== value) {
       trigger(target, key, value, oldValue);
