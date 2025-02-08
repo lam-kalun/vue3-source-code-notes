@@ -1,3 +1,5 @@
+import { DirtyLevels } from "./constants";
+
 /*
   fn 用户编写的回调
 */
@@ -38,18 +40,29 @@ function postCleanEffect(effect) {
     effect.deps.length = effect._depsLength;
   }
 }
-class ReactiveEffect {
+export class ReactiveEffect {
   public active = true; // 创建的effect是响应式的
   _trackId = 0; // 用于记录当前effect执行了几次
   _depsLength = 0;
   _running = 0; // 正在执行时不为0
+  _dirtyLevel = DirtyLevels.Dirty;
 
   deps = []; // 收集当前effect内的属性（如name、age）所对应的dep
   
   // 如果fn中依赖的数据发生变化，需求重新调用run
   constructor(public fn, public scheduler) {}
 
+  public get dirty() {
+    return this._dirtyLevel === DirtyLevels.Dirty;
+  }
+
+  public set dirty(v) {
+    this._dirtyLevel = v ? DirtyLevels.Dirty : DirtyLevels.NoDirty;
+  }
+
   run() {
+    // 每次运行后effect变为no_dirty
+    this._dirtyLevel = DirtyLevels.NoDirty;
     // 让fn执行
     if (!this.active) {
       return this.fn(); // 不是激活的，执行后，什么都不用做
@@ -107,6 +120,10 @@ export function trackEffect(effect, dep) {
 
 export function triggerEffects(dep) {
   for (const effect of dep.keys()) {
+    // computed逻辑，依赖的值触发更新后，effect变为脏
+    if (effect._dirtyLevel < DirtyLevels.Dirty) {
+      effect._dirtyLevel = DirtyLevels.Dirty;
+    }
     if (effect._running === 0) {
       if (effect.scheduler) {
         effect.scheduler();

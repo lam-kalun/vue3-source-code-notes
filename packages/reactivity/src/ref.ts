@@ -1,7 +1,7 @@
 import { toReactive } from "./reactive";
 import { activeEffect, trackEffect, triggerEffects } from './effect';
 import { createDep } from "./reactiveEffect";
-import { ReactiveFlags } from "./baseHandler";
+import { ReactiveFlags } from "./constants";
 
 function createRef(value) {
   return new RefImpl(value);
@@ -27,8 +27,8 @@ class RefImpl {
     // 触发当前被包裹属性所映射的effect
     // 相同值不会触发effect(也很明显了)
     if (newValue !== this.rawValue) {
-      this.rawValue = newValue;
-      this._value = newValue;
+      this.rawValue = toReactive(newValue);
+      this._value = toReactive(newValue);
       // this._value值变化后，再触发trigger
       // 不然触发trigger后，再触发effect.run时会触发get重新收集依赖后，返回的就是旧值
       trigger(this);
@@ -36,7 +36,7 @@ class RefImpl {
   }
 }
 
-function track(ref) {
+export function track(ref) {
   // 因为effect实例的run方法结束后，activeEffect为undefined
   // 触发get时，有activeEffect这个属性，说明这个被包裹的属性，是在effect中运行的
   if (activeEffect) {
@@ -47,7 +47,7 @@ function track(ref) {
   }
 }
 
-function trigger(ref) {
+export function trigger(ref) {
   if (ref.dep) {
     triggerEffects(ref.dep); // 触发依赖更新
   }

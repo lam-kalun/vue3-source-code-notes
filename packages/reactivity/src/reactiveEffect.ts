@@ -24,7 +24,7 @@ export function track(target, key) {
     
     // 将当前的effect放入到dep(影射表)中，后续可以根据值的变化触发此dep中存放的effect
     trackEffect(activeEffect, dep);
-    // console.log(targetMap);
+    console.log(targetMap);
   }
 }
 

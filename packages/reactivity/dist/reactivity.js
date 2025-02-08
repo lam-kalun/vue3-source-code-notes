@@ -2,6 +2,9 @@
 var isObject = (value) => {
   return typeof value === "object" && value !== null;
 };
+var isFunction = (value) => {
+  return typeof value === "function";
+};
 
 // packages/reactivity/src/effect.ts
 function effect(fn, options) {
@@ -44,9 +47,17 @@ var ReactiveEffect = class {
     this._depsLength = 0;
     this._running = 0;
     // 正在执行时不为0
+    this._dirtyLevel = 4 /* Dirty */;
     this.deps = [];
   }
+  get dirty() {
+    return this._dirtyLevel === 4 /* Dirty */;
+  }
+  set dirty(v) {
+    this._dirtyLevel = v ? 4 /* Dirty */ : 0 /* NoDirty */;
+  }
   run() {
+    this._dirtyLevel = 0 /* NoDirty */;
     if (!this.active) {
       return this.fn();
     }
@@ -85,6 +96,9 @@ function trackEffect(effect2, dep) {
 }
 function triggerEffects(dep) {
   for (const effect2 of dep.keys()) {
+    if (effect2._dirtyLevel < 4 /* Dirty */) {
+      effect2._dirtyLevel = 4 /* Dirty */;
+    }
     if (effect2._running === 0) {
       if (effect2.scheduler) {
         effect2.scheduler();
@@ -113,6 +127,7 @@ function track(target, key) {
       }));
     }
     trackEffect(activeEffect, dep);
+    console.log(targetMap);
   }
 }
 function trigger(target, key, value, oldValue) {
@@ -191,8 +206,8 @@ var RefImpl = class {
   }
   set value(newValue) {
     if (newValue !== this.rawValue) {
-      this.rawValue = newValue;
-      this._value = newValue;
+      this.rawValue = toReactive(newValue);
+      this._value = toReactive(newValue);
       trigger2(this);
     }
   }
@@ -262,8 +277,47 @@ function proxyRefs(objectWithRefs) {
     }
   });
 }
+
+// packages/reactivity/src/computed.ts
+var ComputedRefImpl = class {
+  constructor(getter, setter) {
+    this.setter = setter;
+    this.effect = new ReactiveEffect(
+      () => getter(this._value),
+      () => {
+        trigger2(this);
+      }
+    );
+  }
+  get value() {
+    if (this.effect.dirty) {
+      this._value = this.effect.run();
+      track2(this);
+    }
+    return this._value;
+  }
+  set value(v) {
+    this.setter(v);
+  }
+};
+function computed(getterOrOptions) {
+  const onlyGetter = isFunction(getterOrOptions);
+  let getter;
+  let setter;
+  if (onlyGetter) {
+    getter = getterOrOptions;
+    setter = () => {
+    };
+  } else {
+    getter = getterOrOptions.get;
+    setter = getterOrOptions.set;
+  }
+  return new ComputedRefImpl(getter, setter);
+}
 export {
+  ReactiveEffect,
   activeEffect,
+  computed,
   effect,
   proxyRefs,
   reactive,
@@ -271,7 +325,9 @@ export {
   toReactive,
   toRef,
   toRefs,
+  track2 as track,
   trackEffect,
+  trigger2 as trigger,
   triggerEffects
 };
 //# sourceMappingURL=reactivity.js.map
