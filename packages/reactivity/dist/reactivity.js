@@ -5,6 +5,9 @@ var isObject = (value) => {
 var isFunction = (value) => {
   return typeof value === "function";
 };
+var isNumber = (value) => {
+  return typeof value === "number";
+};
 
 // packages/reactivity/src/effect.ts
 function effect(fn, options) {
@@ -127,7 +130,6 @@ function track(target, key) {
       }));
     }
     trackEffect(activeEffect, dep);
-    console.log(targetMap);
   }
 }
 function trigger(target, key, value, oldValue) {
@@ -314,6 +316,57 @@ function computed(getterOrOptions) {
   }
   return new ComputedRefImpl(getter, setter);
 }
+
+// packages/reactivity/src/apiWatch.ts
+function watch(source, cb, options = {}) {
+  return doWatch(source, cb, options);
+}
+function traverse(source, depth, currentDepth = 0, seen = /* @__PURE__ */ new Set()) {
+  if (!isObject(source)) {
+    return source;
+  }
+  if (depth) {
+    if (currentDepth >= depth) {
+      return source;
+    }
+    currentDepth++;
+  }
+  if (seen.has(source)) {
+    return source;
+  }
+  seen.add(source);
+  for (const key in source) {
+    traverse(source[key], depth, currentDepth, seen);
+  }
+  return source;
+}
+function reactiveGetter(source, deep) {
+  let depth;
+  if (isNumber(deep)) {
+    depth = deep;
+  } else {
+    if (deep === false) {
+      depth = 1;
+    } else {
+      depth = Infinity;
+    }
+  }
+  return () => traverse(source, depth);
+}
+function doWatch(source, cb, { deep }) {
+  let getter = reactiveGetter(source, deep);
+  let oldValue;
+  const job = () => {
+    const newValue = effect2.run();
+    cb(newValue, oldValue);
+    oldValue = newValue;
+  };
+  const effect2 = new ReactiveEffect(
+    getter,
+    job
+  );
+  oldValue = effect2.run();
+}
 export {
   ReactiveEffect,
   activeEffect,
@@ -328,6 +381,7 @@ export {
   track2 as track,
   trackEffect,
   trigger2 as trigger,
-  triggerEffects
+  triggerEffects,
+  watch
 };
 //# sourceMappingURL=reactivity.js.map
