@@ -76,6 +76,13 @@ var ReactiveEffect = class {
       activeEffect = lastEffect;
     }
   }
+  stop() {
+    if (this.active) {
+      this.active = false;
+      preCleanEffect(this);
+      postCleanEffect(this);
+    }
+  }
 };
 function cleanDepEffect(dep, effect2) {
   dep.delete(effect2);
@@ -392,6 +399,7 @@ function doWatch(source, cb, { deep, immediate }) {
   } else {
     effect2.run();
   }
+  return () => effect2.stop();
 }
 export {
   ReactiveEffect,

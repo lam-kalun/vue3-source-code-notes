@@ -23,9 +23,11 @@ const Fangs = ref('While');
 // );
 
 // 其实就是effect，不过一开始vue没有开放effect这个api
-watchEffect(() => {
+const unwatch = watchEffect(() => {
   app.innerHTML = `名字：${state.name} 年龄：${state.age}`;
 });
+
+unwatch();
 
 setTimeout(() => {
   state.name = 'Fource';

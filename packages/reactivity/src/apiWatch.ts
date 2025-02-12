@@ -87,4 +87,6 @@ function doWatch(source, cb, { deep, immediate }) {
   } else {
     effect.run();
   }
+
+  return () => effect.stop();
 }
