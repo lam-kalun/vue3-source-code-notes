@@ -5,22 +5,25 @@
 // } from '/node_modules/vue/dist/vue.esm-browser.js';
 
 // 自己的
-import { reactive, watch } from './reactivity.js';
+import { reactive, ref, watch } from './reactivity.js';
 
 const state = reactive({ name: '欧滋', age: 2010, address: { lion: 2 } });
+const Fangs = ref('While');
 
 watch(
-  state,
-  (oldValue, newValue) => {
+  Fangs,
+  (newValue, oldValue) => {
     // 如果是引用类型，oldValue和newValue相等
-    console.log(oldValue, newValue);
+    console.log(newValue, oldValue);
   },
   {
-    deep: 2
+    deep: 2,
+    immediate: true
   }
 );
 
 setTimeout(() => {
   // state.name = 'Fource';
-  state.address.lion = 1;
+  // state.address.lion = 1;
+  Fangs.value = 'Joker';
 }, 1000);

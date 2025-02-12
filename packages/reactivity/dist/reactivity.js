@@ -190,6 +190,9 @@ function reactive(target) {
 function toReactive(value) {
   return isObject(value) ? reactive(value) : value;
 }
+function isReactive(value) {
+  return !!(value && value["__v_isReactive" /* IS_REACTIVE */]);
+}
 
 // packages/reactivity/src/ref.ts
 function createRef(value) {
@@ -279,6 +282,9 @@ function proxyRefs(objectWithRefs) {
     }
   });
 }
+function isRef(value) {
+  return !!(value && value.__v_isRef);
+}
 
 // packages/reactivity/src/computed.ts
 var ComputedRefImpl = class {
@@ -353,25 +359,36 @@ function reactiveGetter(source, deep) {
   }
   return () => traverse(source, depth);
 }
-function doWatch(source, cb, { deep }) {
-  let getter = reactiveGetter(source, deep);
+function doWatch(source, cb, { deep, immediate }) {
+  let getter = () => {
+  };
+  if (isReactive(source)) {
+    getter = reactiveGetter(source, deep);
+  } else if (isRef(source)) {
+    getter = () => source.value;
+  } else if (isFunction(source)) {
+    getter = source;
+  }
   let oldValue;
   const job = () => {
     const newValue = effect2.run();
     cb(newValue, oldValue);
     oldValue = newValue;
   };
-  const effect2 = new ReactiveEffect(
-    getter,
-    job
-  );
-  oldValue = effect2.run();
+  const effect2 = new ReactiveEffect(getter, job);
+  if (immediate) {
+    job();
+  } else {
+    oldValue = effect2.run();
+  }
 }
 export {
   ReactiveEffect,
   activeEffect,
   computed,
   effect,
+  isReactive,
+  isRef,
   proxyRefs,
   reactive,
   ref,

@@ -1,3 +1,9 @@
+// 原生的
+// import {
+//   reactive,
+//   effect
+// } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js';
+
 // 自己的
 import { reactive, effect } from './reactivity.js';
 
