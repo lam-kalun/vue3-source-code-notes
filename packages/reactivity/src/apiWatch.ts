@@ -8,6 +8,10 @@ export function watch(source, cb, options = {} as any) {
   return doWatch(source, cb, options);
 }
 
+export function watchEffect(source, options = {} as any) {
+  return doWatch(source, null, options);
+}
+
 // { name: '欧滋', age: 2010, address: { lion: 2 } }
 function traverse(source, depth, currentDepth = 0, seen = new Set()) {
   // 如果source是obj，遍历source内的所有属性
@@ -64,14 +68,23 @@ function doWatch(source, cb, { deep, immediate }) {
   
   let oldValue;
   const job = () => {
-    const newValue = effect.run();
-    cb(newValue, oldValue);
-    oldValue = newValue;
+    // watchEffect没有cb
+    if (cb) {
+      const newValue = effect.run();
+      cb(newValue, oldValue);
+      oldValue = newValue;
+    } else {
+      effect.run();
+    }
   };
   const effect = new ReactiveEffect(getter, job);
-  if (immediate) {
-    job();
+  if (cb) {
+    if (immediate) {
+      job();
+    } else {
+      oldValue = effect.run();
+    }
   } else {
-    oldValue = effect.run();
+    effect.run();
   }
 }
