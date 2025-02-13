@@ -8,7 +8,7 @@
 import { reactive, ref, watch, watchEffect } from './reactivity.js';
 
 const state = reactive({ name: '欧滋', age: 2010, address: { lion: 2 } });
-const Fangs = ref('While');
+// const Fangs = ref('While');
 
 // watch(
 //   Fangs,
@@ -22,12 +22,33 @@ const Fangs = ref('While');
 //   }
 // );
 
-// 其实就是effect，不过一开始vue没有开放effect这个api
-const unwatch = watchEffect(() => {
-  app.innerHTML = `名字：${state.name} 年龄：${state.age}`;
-});
 
-unwatch();
+// unwatch
+// watchEffect 其实就是effect，不过一开始vue没有开放effect这个api
+// const unwatch = watchEffect(() => {
+//   app.innerHTML = `名字：${state.name} 年龄：${state.age}`;
+// });
+
+// unwatch();
+
+
+// onCleanup
+// 改变 -> job() -> if clean false -> cb() -> setTimeout -> onCleanup() -> clean=fn
+// 第二次改变 -> job() -> if clean true -> fn()、clean=false -> cb() -> setTimeout -> onCleanup() -> clean=fn
+// 每次执行watch的回调，onCleanup都会执行，但是onCleanup里面的回调，是在下一次watch触发时、watch回调执行前执行
+watch(
+  state,
+  (newValue, oldValue, onCleanup) => {
+    const timeoutID = setTimeout(() => {
+      console.log('setTimeout runner');
+    }, 3000);
+    onCleanup(() => {
+      console.log('clean runner');
+      clearTimeout(timeoutID);
+    });
+  }
+);
+
 
 setTimeout(() => {
   state.name = 'Fource';

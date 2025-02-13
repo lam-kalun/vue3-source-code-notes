@@ -67,11 +67,22 @@ function doWatch(source, cb, { deep, immediate }) {
   }
   
   let oldValue;
+  let clean;
+  const onCleanup = (fn) => {
+    clean = () => {
+      fn();
+      clean = undefined;
+    };
+  };
   const job = () => {
     // watchEffect没有cb
     if (cb) {
+      if (clean) {
+        clean();
+      }
+
       const newValue = effect.run();
-      cb(newValue, oldValue);
+      cb(newValue, oldValue, onCleanup);
       oldValue = newValue;
     } else {
       effect.run();
