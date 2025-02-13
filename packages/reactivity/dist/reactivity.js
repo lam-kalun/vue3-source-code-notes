@@ -388,10 +388,10 @@ function doWatch(source, cb, { deep, immediate }) {
     };
   };
   const job = () => {
+    if (clean) {
+      clean();
+    }
     if (cb) {
-      if (clean) {
-        clean();
-      }
       const newValue = effect2.run();
       cb(newValue, oldValue, onCleanup);
       oldValue = newValue;
@@ -399,6 +399,11 @@ function doWatch(source, cb, { deep, immediate }) {
       effect2.run();
     }
   };
+  if (!cb) {
+    getter = () => {
+      source(onCleanup);
+    };
+  }
   const effect2 = new ReactiveEffect(getter, job);
   if (cb) {
     if (immediate) {

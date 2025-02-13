@@ -74,13 +74,12 @@ function doWatch(source, cb, { deep, immediate }) {
       clean = undefined;
     };
   };
-  const job = () => {
+  const job = () => {    
+    if (clean) {
+      clean();
+    }
     // watchEffect没有cb
     if (cb) {
-      if (clean) {
-        clean();
-      }
-
       const newValue = effect.run();
       cb(newValue, oldValue, onCleanup);
       oldValue = newValue;
@@ -88,6 +87,10 @@ function doWatch(source, cb, { deep, immediate }) {
       effect.run();
     }
   };
+  if (!cb) {
+    // 没有cb就是watchEffect
+    getter = () => { source(onCleanup); }
+  }
   const effect = new ReactiveEffect(getter, job);
   if (cb) {
     if (immediate) {

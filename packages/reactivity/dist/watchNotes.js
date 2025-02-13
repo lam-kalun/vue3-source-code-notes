@@ -36,18 +36,28 @@ const state = reactive({ name: '欧滋', age: 2010, address: { lion: 2 } });
 // 改变 -> job() -> if clean false -> cb() -> setTimeout -> onCleanup() -> clean=fn
 // 第二次改变 -> job() -> if clean true -> fn()、clean=false -> cb() -> setTimeout -> onCleanup() -> clean=fn
 // 每次执行watch的回调，onCleanup都会执行，但是onCleanup里面的回调，是在下一次watch触发时、watch回调执行前执行
-watch(
-  state,
-  (newValue, oldValue, onCleanup) => {
-    const timeoutID = setTimeout(() => {
-      console.log('setTimeout runner');
-    }, 3000);
-    onCleanup(() => {
-      console.log('clean runner');
-      clearTimeout(timeoutID);
-    });
-  }
-);
+// watch(
+//   state,
+//   (newValue, oldValue, onCleanup) => {
+//     const timeoutID = setTimeout(() => {
+//       console.log('setTimeout runner');
+//     }, 3000);
+//     onCleanup(() => {
+//       clearTimeout(timeoutID);
+//     });
+//   }
+// );
+
+watchEffect((onCleanup) => {
+  app.innerHTML = `姓名：${state.name} 年龄：${state.age}`
+  const timeoutID = setTimeout(() => {
+    console.log('setTimeout runner');
+  }, 3000);
+  onCleanup(() => {
+    console.log('clean runner');
+    clearTimeout(timeoutID);
+  });
+})
 
 
 setTimeout(() => {
