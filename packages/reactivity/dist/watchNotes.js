@@ -61,7 +61,7 @@ watchEffect((onCleanup) => {
 
 
 setTimeout(() => {
-  state.name = 'Fource';
+  state.name = 'Fourze';
   state.age = 2011;
   // state.address.lion = 1;
   // Fangs.value = 'Joker';
