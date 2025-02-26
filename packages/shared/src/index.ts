@@ -9,3 +9,5 @@ export const isFunction = (value) => {
 export const isNumber = (value) => {
   return typeof value === 'number';
 }
+
+export * from './shapeFlags'

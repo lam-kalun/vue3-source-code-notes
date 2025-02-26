@@ -11,12 +11,12 @@
     // 原生的
     import {
       h,
-      render,
-      createRenderer
+      // render,
+      // createRenderer
     } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js';
 
     // 自己的
-    import { renderOptions } from './runtime-dom.js';
+    import { renderOptions, createRenderer, render } from './runtime-dom.js';
 
     // 三个入参
     // type props content
@@ -28,14 +28,17 @@
         onClick: () => alert('start you engine'),
         // 自己的还没兼容这种情况
         // onClick: [() => alert(1), () => alert(2)],
-        attr: 'isYou'
+        attr: 'isYou',
       },
-      'build'
+      // children为文本
+      // 'build'
+      // children为数组
+      [h('p', 'hello'), h('p', 'world')]
     );
     
     // render(vNode, app);
+
     const renderer = createRenderer(renderOptions);
-    
     renderer.render(vNode, app);
   </script>
 </body>

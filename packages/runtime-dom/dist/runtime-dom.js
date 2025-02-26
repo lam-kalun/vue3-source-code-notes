@@ -115,6 +115,57 @@ var isNumber = (value) => {
   return typeof value === "number";
 };
 
+// packages/runtime-core/src/index.ts
+function createRenderer(renderOptions2) {
+  const {
+    insert: hostInsert,
+    remove: hostRemove,
+    createElement: hostCreateElement,
+    createText: hostCreateText,
+    setText: hostSetText,
+    setElementText: hostSetElementText,
+    parentNode: hostParentNode,
+    nextSibling: hostNextSibling,
+    patchProp: hostPatchProp
+  } = renderOptions2;
+  const mountChildren = (children, container) => {
+    for (const item of children) {
+      patch(null, item, container);
+    }
+  };
+  const mountElement = (vNode, container) => {
+    const { type, props, children, shapeFlag } = vNode;
+    const el = hostCreateElement(type);
+    if (props) {
+      for (const key in props) {
+        hostPatchProp(el, key, null, props[key]);
+      }
+    }
+    if (shapeFlag & 8 /* TEXT_CHILDREN */) {
+      hostSetElementText(el, children);
+    } else if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
+      mountChildren(children, el);
+    }
+    hostInsert(el, container);
+  };
+  const patch = (n1, n2, container) => {
+    if (n1 === n2) {
+      return;
+    }
+    ;
+    if (n1 === null) {
+      mountElement(n2, container);
+    }
+  };
+  const render2 = (vNode, container) => {
+    patch(container._vNode || null, vNode, container);
+    container._vNode = vNode;
+  };
+  return {
+    render: render2
+  };
+}
+
 // packages/reactivity/src/effect.ts
 function effect(fn, options) {
   const _effect = new ReactiveEffect(
@@ -525,16 +576,21 @@ function doWatch(source, cb, { deep, immediate }) {
 
 // packages/runtime-dom/src/index.ts
 var renderOptions = Object.assign({ patchProp }, nodeOps);
+var render = (vNode, container) => {
+  return createRenderer(renderOptions).render(vNode, container);
+};
 export {
   ReactiveEffect,
   activeEffect,
   computed,
+  createRenderer,
   effect,
   isReactive,
   isRef,
   proxyRefs,
   reactive,
   ref,
+  render,
   renderOptions,
   toReactive,
   toRef,
