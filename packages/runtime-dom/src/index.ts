@@ -8,5 +8,7 @@ export const render = (vNode, container) => {
   return createRenderer(renderOptions).render(vNode, container);
 };
 
+// 私人醒的
+export { renderOptions };
 export * from '@vue/reactivity';
-export { renderOptions, createRenderer };
+export * from '@vue/runtime-core';

@@ -114,8 +114,14 @@ var isFunction = (value) => {
 var isNumber = (value) => {
   return typeof value === "number";
 };
+var isString = (value) => {
+  return typeof value === "string";
+};
+var isVNode = (value) => {
+  return value ? value.__v_isVNode === true : false;
+};
 
-// packages/runtime-core/src/index.ts
+// packages/runtime-core/src/createRenderer.ts
 function createRenderer(renderOptions2) {
   const {
     insert: hostInsert,
@@ -164,6 +170,49 @@ function createRenderer(renderOptions2) {
   return {
     render: render2
   };
+}
+
+// packages/runtime-core/src/createVNode.ts
+function createVNode(type, props, children) {
+  const shapeFlag = isString(type) ? 1 /* ELEMENT */ : 0;
+  const vNode = {
+    __v_isVNode: true,
+    type,
+    props,
+    children,
+    shapeFlag,
+    el: null,
+    key: props?.key
+  };
+  if (children) {
+    if (Array.isArray(children)) {
+      vNode.shapeFlag |= 16 /* ARRAY_CHILDREN */;
+    } else {
+      vNode.shapeFlag |= 8 /* TEXT_CHILDREN */;
+      vNode.children = String(children);
+    }
+  }
+  return vNode;
+}
+
+// packages/runtime-core/src/h.ts
+function h(type, propsOrChildren, children) {
+  const l = arguments.length;
+  if (l === 2) {
+    if (isVNode(propsOrChildren)) {
+      return createVNode(type, null, [propsOrChildren]);
+    }
+    if (!isObject(propsOrChildren)) {
+      return createVNode(type, null, propsOrChildren);
+    }
+  } else if (l === 3) {
+    if (isVNode(children)) {
+      return createVNode(type, propsOrChildren, [children]);
+    }
+  } else if (l > 3) {
+    return createVNode(type, propsOrChildren, Array.from(arguments).slice(2));
+  }
+  return createVNode(type, propsOrChildren, children);
 }
 
 // packages/reactivity/src/effect.ts
@@ -585,6 +634,7 @@ export {
   computed,
   createRenderer,
   effect,
+  h,
   isReactive,
   isRef,
   proxyRefs,
