@@ -117,9 +117,6 @@ var isNumber = (value) => {
 var isString = (value) => {
   return typeof value === "string";
 };
-var isVNode = (value) => {
-  return value ? value.__v_isVNode === true : false;
-};
 
 // packages/runtime-core/src/createRenderer.ts
 function createRenderer(renderOptions2) {
@@ -194,6 +191,9 @@ function createVNode(type, props, children) {
   }
   return vNode;
 }
+var isVNode = (value) => {
+  return value ? value.__v_isVNode === true : false;
+};
 
 // packages/runtime-core/src/h.ts
 function h(type, propsOrChildren, children) {

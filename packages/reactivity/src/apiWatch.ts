@@ -67,7 +67,9 @@ function doWatch(source, cb, { deep, immediate }) {
   }
   
   let oldValue;
+  // 第一次触发监听时设置的回调，第二次触发监听时触发
   let clean;
+  // 在这里设置，每次触发监听都会设置
   const onCleanup = (fn) => {
     clean = () => {
       fn();
@@ -78,7 +80,7 @@ function doWatch(source, cb, { deep, immediate }) {
     if (clean) {
       clean();
     }
-    // watchEffect没有cb
+    // watch
     if (cb) {
       const newValue = effect.run();
       cb(newValue, oldValue, onCleanup);
@@ -87,8 +89,9 @@ function doWatch(source, cb, { deep, immediate }) {
       effect.run();
     }
   };
+  // watchEffect
   if (!cb) {
-    // 没有cb就是watchEffect
+    // 没有cb就是watchEffect，source就是其cb
     getter = () => { source(onCleanup); }
   }
   const effect = new ReactiveEffect(getter, job);

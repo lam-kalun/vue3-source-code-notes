@@ -1,5 +1,5 @@
-import { isObject, isVNode } from '@vue/shared';
-import { createVNode } from './createVNode';
+import { isObject } from '@vue/shared';
+import { createVNode, isVNode } from './createVNode';
 
 export function h(type, propsOrChildren?, children?) {
   const l = arguments.length;

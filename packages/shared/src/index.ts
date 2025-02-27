@@ -14,8 +14,4 @@ export const isString = (value) => {
   return typeof value === 'string';
 };
 
-export const isVNode = (value) => {
-  return value ? value.__v_isVNode === true : false;
-};
-
 export * from './shapeFlags'

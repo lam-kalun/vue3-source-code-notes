@@ -26,3 +26,7 @@ export function createVNode(type, props, children?) {
 
   return vNode;
 };
+
+export const isVNode = (value) => {
+  return value ? value.__v_isVNode === true : false;
+};
