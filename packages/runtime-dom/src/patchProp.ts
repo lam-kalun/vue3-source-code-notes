@@ -10,6 +10,7 @@ export default function patchProp(el, key, prevValue, nextValue) {
   if (key === 'class') {
     patchClass(el, nextValue);
   } else if (key === 'style') {
+    // 其他的都可以直接替换新值，只有style要去掉旧值
     patchStyle(el, prevValue, nextValue);
   } else if (/^on[^a-z]/.test(key)) {
     patchEvent(el, key, nextValue);

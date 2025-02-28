@@ -118,58 +118,7 @@ var isString = (value) => {
   return typeof value === "string";
 };
 
-// packages/runtime-core/src/createRenderer.ts
-function createRenderer(renderOptions2) {
-  const {
-    insert: hostInsert,
-    remove: hostRemove,
-    createElement: hostCreateElement,
-    createText: hostCreateText,
-    setText: hostSetText,
-    setElementText: hostSetElementText,
-    parentNode: hostParentNode,
-    nextSibling: hostNextSibling,
-    patchProp: hostPatchProp
-  } = renderOptions2;
-  const mountChildren = (children, container) => {
-    for (const item of children) {
-      patch(null, item, container);
-    }
-  };
-  const mountElement = (vNode, container) => {
-    const { type, props, children, shapeFlag } = vNode;
-    const el = hostCreateElement(type);
-    if (props) {
-      for (const key in props) {
-        hostPatchProp(el, key, null, props[key]);
-      }
-    }
-    if (shapeFlag & 8 /* TEXT_CHILDREN */) {
-      hostSetElementText(el, children);
-    } else if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
-      mountChildren(children, el);
-    }
-    hostInsert(el, container);
-  };
-  const patch = (n1, n2, container) => {
-    if (n1 === n2) {
-      return;
-    }
-    ;
-    if (n1 === null) {
-      mountElement(n2, container);
-    }
-  };
-  const render2 = (vNode, container) => {
-    patch(container._vNode || null, vNode, container);
-    container._vNode = vNode;
-  };
-  return {
-    render: render2
-  };
-}
-
-// packages/runtime-core/src/createVNode.ts
+// packages/runtime-core/src/vnode.ts
 function createVNode(type, props, children) {
   const shapeFlag = isString(type) ? 1 /* ELEMENT */ : 0;
   const vNode = {
@@ -194,6 +143,95 @@ function createVNode(type, props, children) {
 var isVNode = (value) => {
   return value ? value.__v_isVNode === true : false;
 };
+function isSameVNodeType(n1, n2) {
+  return n1.type === n2.type && n1.key === n2.key;
+}
+
+// packages/runtime-core/src/renderer.ts
+function createRenderer(renderOptions2) {
+  const {
+    insert: hostInsert,
+    remove: hostRemove,
+    createElement: hostCreateElement,
+    createText: hostCreateText,
+    setText: hostSetText,
+    setElementText: hostSetElementText,
+    parentNode: hostParentNode,
+    nextSibling: hostNextSibling,
+    patchProp: hostPatchProp
+  } = renderOptions2;
+  const unmount = (vNode) => {
+    hostRemove(vNode.el);
+  };
+  const mountElement = (vNode, container) => {
+    const { type, props, children, shapeFlag } = vNode;
+    const el = vNode.el = hostCreateElement(type);
+    if (props) {
+      for (const key in props) {
+        hostPatchProp(el, key, null, props[key]);
+      }
+    }
+    if (shapeFlag & 8 /* TEXT_CHILDREN */) {
+      hostSetElementText(el, children);
+    } else if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
+      mountChildren(children, el);
+    }
+    hostInsert(el, container);
+  };
+  const mountChildren = (children, container) => {
+    for (const item of children) {
+      patch(null, item, container);
+    }
+  };
+  const patchProps = (oldProps, newProps, el) => {
+    for (const key in newProps) {
+      hostPatchProp(el, key, oldProps[key], newProps[key]);
+    }
+    for (const key in oldProps) {
+      if (!newProps[key]) {
+        hostPatchProp(el, key, oldProps[key], null);
+      }
+    }
+  };
+  const patchElement = (n1, n2, container) => {
+    const el = n2.el = n1.el;
+    const oldProps = n1.props || {};
+    const newProps = n2.props || {};
+    patchProps(oldProps, newProps, el);
+    n2.props = n1.props;
+  };
+  const processElement = (n1, n2, container) => {
+    if (n1 === null) {
+      mountElement(n2, container);
+    } else {
+      patchElement(n1, n2, container);
+    }
+  };
+  const patch = (n1, n2, container) => {
+    if (n1 === n2) {
+      return;
+    }
+    ;
+    if (n1 && !isSameVNodeType(n1, n2)) {
+      unmount(n1);
+      n1 = null;
+    }
+    processElement(n1, n2, container);
+  };
+  const render2 = (vNode, container) => {
+    if (vNode == null) {
+      if (container._vNode) {
+        unmount(container._vNode);
+      }
+    } else {
+      patch(container._vNode || null, vNode, container);
+    }
+    container._vNode = vNode;
+  };
+  return {
+    render: render2
+  };
+}
 
 // packages/runtime-core/src/h.ts
 function h(type, propsOrChildren, children) {
@@ -633,10 +671,13 @@ export {
   activeEffect,
   computed,
   createRenderer,
+  createVNode,
   effect,
   h,
   isReactive,
   isRef,
+  isSameVNodeType,
+  isVNode,
   proxyRefs,
   reactive,
   ref,
