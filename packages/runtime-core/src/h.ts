@@ -1,4 +1,4 @@
-import { isObject } from '@vue/shared';
+import { isString } from '@vue/shared';
 import { createVNode, isVNode } from './vnode';
 
 export function h(type, propsOrChildren?, children?) {
@@ -16,7 +16,7 @@ export function h(type, propsOrChildren?, children?) {
       return createVNode(type, null, [propsOrChildren]);
     }
     // 2.2、2.3
-    if (!isObject(propsOrChildren)) {
+    if (isString(propsOrChildren) || Array.isArray(propsOrChildren)) {
       return createVNode(type, null, propsOrChildren);
     }
   } else if (l === 3) {

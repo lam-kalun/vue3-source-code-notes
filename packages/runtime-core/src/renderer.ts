@@ -15,9 +15,26 @@ export function createRenderer(renderOptions) {
     patchProp: hostPatchProp
   } = renderOptions;
 
-  // 移除节点
+  // 移除虚拟节点
   const unmount = (vNode) => {
     hostRemove(vNode.el);
+  };
+
+  // 移除数组虚拟节点
+  const unmountChildren = (children) => {
+    for (let i = 0; i < children.length; i++) {
+      unmount(children[i]);
+    }
+  };
+
+  // 递归挂载儿子元素
+  const mountChildren = (children, container) => {
+    // todo暂时只考虑数组里面是h()
+    // 如果是number或者string，就先让其变为虚拟节点，再patch
+    // 所以如果children是数组，那么经过mountChildren()后，会变为vNode[]
+    for (const item of children) {
+      patch(null, item, container);
+    }
   };
 
   // 挂载元素
@@ -46,14 +63,6 @@ export function createRenderer(renderOptions) {
     hostInsert(el, container);
   };
 
-  // 递归挂载儿子元素
-  const mountChildren = (children, container) => {
-    // todo暂时只考虑数组里面是h()
-    for (const item of children) {
-      patch(null, item, container);
-    }
-  };
-
   // 比较属性(直接处理对应的el元素)
   const patchProps = (oldProps, newProps, el) => {
     // 新属性全部采用
@@ -61,7 +70,7 @@ export function createRenderer(renderOptions) {
       hostPatchProp(el, key, oldProps[key], newProps[key]);
     }
 
-    // 去掉未剩余的旧属性
+    // 去掉剩余的旧属性
     for (const key in oldProps) {
       if (!newProps[key]) {
         hostPatchProp(el, key, oldProps[key], null);
@@ -69,7 +78,58 @@ export function createRenderer(renderOptions) {
     }
   };
 
-  // 比较元素节点的差异，肯定要复用元素
+  // 比较children(直接处理对应的el元素)
+  const patchChildren = (n1, n2, el) => {
+    // n1是旧的，n2是新的
+    const c1 = n1.children; // 因为上一次mountChildren做过处理，c1必定是vNode[]
+    const c2 = n2.children;
+
+    const prevShapeFlag = n1.shapeFlag;
+    const shapeFlag = n2.shapeFlag;
+
+    // children一共有3种情况
+    // 新的 旧的
+    // 文本 数组
+    // 文本 文本
+    // 文本 null
+    // 数组 数组
+    // 数组 文本
+    // 数组 null
+    // null 数组
+    // null 文本
+    // null null(不做处理)
+
+    // 新的是文本
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      // 旧的就可能数组、文本、null
+      // 如果旧的是数组要删除旧儿子
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        unmountChildren(c1);
+      }
+
+      // 旧的是文本或者null，直接替换
+      if (c1 !== c2) {
+        hostSetElementText(el, c2);
+      }
+    } else if(shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      // 新的是数组
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // todo diff算法
+      } else {
+        hostSetElementText(el, '');
+        mountChildren(c2, el);
+      }
+    } else if (shapeFlag & ShapeFlags.ELEMENT) {
+      // 新的是文本
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        unmountChildren(c1);
+      } else {
+        hostSetElementText(el, '');
+      }
+    }
+  };
+
+  // 比较元素节点的差异
   const patchElement = (n1, n2, container) => {
     // 复用dom元素
     const el = n2.el = n1.el;
@@ -82,7 +142,8 @@ export function createRenderer(renderOptions) {
     n2.props = n1.props;
 
     // todo比较children
-
+    patchChildren(n1, n2, el);
+    n2.children = n1.children;
   };
 
   // 处理元素
@@ -137,6 +198,9 @@ export function createRenderer(renderOptions) {
       patch(container._vNode || null, vNode, container);
     }
     // 记录新值
+    // 此时vNode的children如果是数组，经过patch -> patchElement -> mountElement -> mountChildren后
+    // 会把children里的number和string变为type = Text的vNode
+    // 所以container._vNode.children为vNode[]
     container._vNode = vNode;
   };
 

@@ -46,8 +46,10 @@
     //   // h('span', 'grip')
     //   // children为数组
     //   // [h('p', 'kiva'), h('p', 'grip')]
-    //   // ['kiva', 'grip']
+    //   // 还没实现， todo mountChildren方法
+    //   ['kiva', 'grip']
     // );
+    
     
 
     // 两种渲染方法
@@ -69,15 +71,38 @@
     // }, 1000)
 
     // 元素节点不相同
+    // const ele1 = h('h1', 'Wizard');
+    // const ele2 = h('div', {style: {
+    //   color:'#bd4634',
+    //   fontSize: '28px'
+    // }}, 'Fire Dragon');
+    // render(ele1, app);
+    // setTimeout(() => {
+    //   render(ele2, app);
+    // }, 1000);
+
+    // 元素节点相同，属性、children不相同
     const ele1 = h('h1', 'Wizard');
-    const ele2 = h('div', {style: {
-      color:'#bd4634',
-      fontSize: '28px'
-    }}, 'Fire Dragon');
-    render(ele1, app);
+    const ele2 = h('h1', { style: { color:'#E91E63'} }, 'Wizard');
+    const ele3 = h('h1',
+      { style: { color:'#bd4634'} }, 
+      [h('span', { style: { marginRight: '5px' } }, 'Fire'), h('span', 'Dragon')]
+    );
+    const ele4 = h('h1',
+      { style: { color:'rgb(176 199 234)'} }, 
+      [h('span', { style: { marginRight: '5px' } }, 'Diamond'), h('span', 'Dragon')]
+    );
+    const ele5 = h('h1', { style: { color:'#bd4634'} }, null);
+    const ele6 = h('h1', null);
+    render(ele2, app);
     setTimeout(() => {
-      render(ele2, app);
+      render(ele4, app);
     }, 1000);
+
+    // const ele1 = h('h1', ['Wizard', 'witchcraft']);
+    // const ele2 = h('h1', 'Wizard');
+    // render(ele2, app);
+    
   </script>
 </body>
 </html>
