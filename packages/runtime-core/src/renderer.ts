@@ -14,8 +14,7 @@ export function createRenderer(renderOptions) {
     nextSibling: hostNextSibling,
     patchProp: hostPatchProp
   } = renderOptions;
-
-  // 移除虚拟节点
+ 
   const unmount = (vNode) => {
     hostRemove(vNode.el);
   };
@@ -38,7 +37,7 @@ export function createRenderer(renderOptions) {
   };
 
   // 挂载元素
-  const mountElement = (vNode, container) => {
+  const mountElement = (vNode, container, anchor) => {
     const { type, props, children, shapeFlag } = vNode;
     // 创建元素
     const el = vNode.el = hostCreateElement(type);
@@ -60,7 +59,7 @@ export function createRenderer(renderOptions) {
       mountChildren(children, el);
     }
     
-    hostInsert(el, container);
+    hostInsert(el, container, anchor);
   };
 
   // 比较属性(直接处理对应的el元素)
@@ -75,6 +74,101 @@ export function createRenderer(renderOptions) {
       if (!newProps[key]) {
         hostPatchProp(el, key, oldProps[key], null);
       }
+    }
+  };
+
+  // 新旧children都是数组时，diff算法比较
+  const patchKeyedChildren = (c1, c2, el) => {
+    // 整理思路
+    // 先从头开始比较后，改变和确认i，再从尾部开始比较后，改变和确认e1、e2
+
+    // c1、c2开始的索引
+    let i = 0;
+    // c1结束的索引
+    let e1 = c1.length - 1;
+    // c2结束的索引
+    let e2 = c2.length - 1;
+
+    // 从头开始比较，相同的虚拟节点，直接渲染在元素节点上
+    while (i <= e1 && i <= e2) {
+      // todo c2[i] 不一定是vNode，要在这让其变为vNode
+      if (isSameVNodeType(c1[i], c2[i])) {
+        patch(c1[i], c2[i], el);
+      } else {
+        break;
+      }
+      i++
+    }
+
+    // 再从尾部开始比较，相同的虚拟节点，直接渲染在元素节点上
+    while (i <= e1 && i <= e2) {
+      // todo c2[e2] 不一定是vNode，要在这让其变为vNode
+      if (isSameVNodeType(c1[e1], c2[e2])) {
+        patch(c1[e1], c2[e2], el);
+      } else {
+        break;
+      }
+      e1--;
+      e2--;
+    }
+
+    console.log(i, e1, e2);
+
+
+    // 旧的(e1)被新的(e2)从头部或尾部开始全部包含，且顺序都一样
+    // (a b)
+    // (a b) c
+    // i = 2, e1 = 1, e2 = 2
+    // (a b)
+    // c (a b)
+    // i = 0, e1 = -1, e2 = 0
+    // (a c)
+    // (a) b (c)
+    // i = 1, e1 = 0, e2 = 1
+    // e2括号外的，可以多加几位
+    // 证明i被e1，或者e1被i，遍历完了
+    if (i > e1) {
+      // i没有遍历完e2，或者e2没有遍历完i，=证明i遍历到了e2的位置，或者e2遍历到了i的位置
+      if (i <= e2) {
+        // 根据e2后一位是否存在，判断是上面的哪一个例子
+        const nextPos = e2 + 1;
+        // c2[nextPos]已经在上面变为了vNode
+        const anchor = c2[nextPos] === undefined ? null : c2[nextPos].el;
+        while (i <= e2) {
+          // todo c2[e2] 不一定是vNode，要在这让其变为vNode
+          patch(null, c2[i], el, anchor);
+          i++;
+        }
+      }
+    }
+
+    // 新的(e2)被旧的(e1)从头部或尾部开始全部包含，且顺序都一样
+    // (a b) c
+    // (a b)
+    // i = 2, e1 = 2, e2 = 1
+    // a (b c)
+    // (b c)
+    // i = 0, e1 = 0, e2 = -1
+    // (a) b (c)
+    // (a c)
+    // i = 1, e1 = 1, e2 = 0
+    // e1括号外的，可以多加几位
+    else if (i > e2) {
+      while (i <= e1) {
+        unmount(c1[i]);
+        i++
+      }
+    }
+
+    // 旧的(e1)和新的(e2)，除了头部和尾部，两方都还有不一样的
+    // a b c
+    // b
+    // i = 0, e1 = 2, e2 = 0
+    // (a b c) e f j d (h)
+    // (a b c) d e f g k (h)
+    // i = 3, e1 = 6, e2 = 7
+    else {
+      
     }
   };
 
@@ -114,10 +208,11 @@ export function createRenderer(renderOptions) {
     } else if(shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       // 新的是数组
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-        // todo diff算法
+        // diff算法
+        patchKeyedChildren(c1, c2, el);
       } else {
         hostSetElementText(el, '');
-        mountChildren(c2, el);
+        mountChildren(c2, el);    
       }
     } else if (shapeFlag & ShapeFlags.ELEMENT) {
       // 新的是文本
@@ -141,16 +236,15 @@ export function createRenderer(renderOptions) {
     patchProps(oldProps, newProps, el);
     n2.props = n1.props;
 
-    // todo比较children
     patchChildren(n1, n2, el);
     n2.children = n1.children;
   };
 
   // 处理元素
-  const processElement = (n1, n2, container) => {
+  const processElement = (n1, n2, container, anchor) => {
     // 初始化
     if (n1 === null) {
-      mountElement(n2, container);
+      mountElement(n2, container, anchor);
     } else {
       patchElement(n1, n2, container);
     }
@@ -162,7 +256,7 @@ export function createRenderer(renderOptions) {
     container：装载的容器
     渲染走这里，更新也走这里
   */
-  const patch = (n1, n2, container) => {
+  const patch = (n1, n2, container, anchor?) => {
     // 两次渲染同一个元素跳过即可
     if (n1 === n2) {
       return;
@@ -176,7 +270,7 @@ export function createRenderer(renderOptions) {
 
     // 根据n1.shapeFlag得出1.type，然后处理不同type
     // 元素
-    processElement(n1, n2, container);
+    processElement(n1, n2, container, anchor);
     // todo组件
   };
 

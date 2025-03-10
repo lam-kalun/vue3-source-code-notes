@@ -44,7 +44,7 @@ export function trigger(target, key, value, oldValue) {
   triggerEffects(dep);
 }
 
-// todo 整理格式
+// 整理格式
 // {
 //   {name: '欧兹', age: 2010}: {
 //     name: {

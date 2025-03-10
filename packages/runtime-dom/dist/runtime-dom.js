@@ -177,7 +177,7 @@ function createRenderer(renderOptions2) {
       patch(null, item, container);
     }
   };
-  const mountElement = (vNode, container) => {
+  const mountElement = (vNode, container, anchor) => {
     const { type, props, children, shapeFlag } = vNode;
     const el = vNode.el = hostCreateElement(type);
     if (props) {
@@ -190,7 +190,7 @@ function createRenderer(renderOptions2) {
     } else if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
       mountChildren(children, el);
     }
-    hostInsert(el, container);
+    hostInsert(el, container, anchor);
   };
   const patchProps = (oldProps, newProps, el) => {
     for (const key in newProps) {
@@ -200,6 +200,45 @@ function createRenderer(renderOptions2) {
       if (!newProps[key]) {
         hostPatchProp(el, key, oldProps[key], null);
       }
+    }
+  };
+  const patchKeyedChildren = (c1, c2, el) => {
+    let i = 0;
+    let e1 = c1.length - 1;
+    let e2 = c2.length - 1;
+    while (i <= e1 && i <= e2) {
+      if (isSameVNodeType(c1[i], c2[i])) {
+        patch(c1[i], c2[i], el);
+      } else {
+        break;
+      }
+      i++;
+    }
+    while (i <= e1 && i <= e2) {
+      if (isSameVNodeType(c1[e1], c2[e2])) {
+        patch(c1[e1], c2[e2], el);
+      } else {
+        break;
+      }
+      e1--;
+      e2--;
+    }
+    console.log(i, e1, e2);
+    if (i > e1) {
+      if (i <= e2) {
+        const nextPos = e2 + 1;
+        const anchor = c2[nextPos] === void 0 ? null : c2[nextPos].el;
+        while (i <= e2) {
+          patch(null, c2[i], el, anchor);
+          i++;
+        }
+      }
+    } else if (i > e2) {
+      while (i <= e1) {
+        unmount(c1[i]);
+        i++;
+      }
+    } else {
     }
   };
   const patchChildren = (n1, n2, el) => {
@@ -216,6 +255,7 @@ function createRenderer(renderOptions2) {
       }
     } else if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
       if (prevShapeFlag & 16 /* ARRAY_CHILDREN */) {
+        patchKeyedChildren(c1, c2, el);
       } else {
         hostSetElementText(el, "");
         mountChildren(c2, el);
@@ -237,14 +277,14 @@ function createRenderer(renderOptions2) {
     patchChildren(n1, n2, el);
     n2.children = n1.children;
   };
-  const processElement = (n1, n2, container) => {
+  const processElement = (n1, n2, container, anchor) => {
     if (n1 === null) {
-      mountElement(n2, container);
+      mountElement(n2, container, anchor);
     } else {
       patchElement(n1, n2, container);
     }
   };
-  const patch = (n1, n2, container) => {
+  const patch = (n1, n2, container, anchor) => {
     if (n1 === n2) {
       return;
     }
@@ -253,7 +293,7 @@ function createRenderer(renderOptions2) {
       unmount(n1);
       n1 = null;
     }
-    processElement(n1, n2, container);
+    processElement(n1, n2, container, anchor);
   };
   const render2 = (vNode, container) => {
     if (vNode == null) {
