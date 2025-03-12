@@ -223,7 +223,6 @@ function createRenderer(renderOptions2) {
       e1--;
       e2--;
     }
-    console.log(i, e1, e2);
     if (i > e1) {
       if (i <= e2) {
         const nextPos = e2 + 1;
@@ -239,6 +238,33 @@ function createRenderer(renderOptions2) {
         i++;
       }
     } else {
+      const s1 = i;
+      const s2 = i;
+      const keyToNewIndexMap = /* @__PURE__ */ new Map();
+      for (i = s2; i <= e2; i++) {
+        const vNode = c2[i];
+        keyToNewIndexMap.set(vNode.key, i);
+      }
+      for (let i2 = s1; i2 <= e1; i2++) {
+        const vNode = c1[i2];
+        const newIndex = keyToNewIndexMap.get(vNode.key);
+        if (newIndex == void 0) {
+          unmount(vNode);
+        } else {
+          patch(vNode, c2[newIndex], el);
+        }
+      }
+      const toBePatched = e2 - s2 + 1;
+      for (i = toBePatched - 1; i >= 0; i--) {
+        const newIndex = s2 + i;
+        const newChild = c2[newIndex];
+        const anchor = c2[newIndex + 1]?.el;
+        if (newChild.el) {
+          hostInsert(newChild.el, el, anchor);
+        } else {
+          patch(null, newChild, el, anchor);
+        }
+      }
     }
   };
   const patchChildren = (n1, n2, el) => {

@@ -112,9 +112,6 @@ export function createRenderer(renderOptions) {
       e2--;
     }
 
-    console.log(i, e1, e2);
-
-
     // 旧的(e1)被新的(e2)从头部或尾部开始全部包含，且顺序都一样
     // (a b)
     // (a b) c
@@ -168,7 +165,58 @@ export function createRenderer(renderOptions) {
     // (a b c) d e f g k (h)
     // i = 3, e1 = 6, e2 = 7
     else {
-      
+      const s1 = i;
+      const s2 = i;
+
+      // d e f g k的映射表，把key和索引关联起来
+      // 方便判断老的是否在新的里还有，没有就删除，有就更新
+      const keyToNewIndexMap = new Map();
+
+      // 将新的vNode的key、index放入keyToNewIndexMap
+      for (i = s2; i <= e2; i++) {
+        // todo c2[e2] 不一定是vNode，要在这让其变为vNode
+        const vNode = c2[i];
+        keyToNewIndexMap.set(vNode.key, i);
+      }
+
+      // 判断老的是否在新的里还有，没有就删除，有就更新页面元素和c2里vNode对应的el
+      // 此时顺序还是旧的(c1)
+      // 处理后元素显示为 a2 b2 c2 e2 f2 (j被删除) d2 h2
+      // 为d2 e2 f2加上了el，处理后c2还有g、k没有el
+      for(let i = s1; i <= e1; i++) {
+        const vNode = c1[i];
+        const newIndex = keyToNewIndexMap.get(vNode.key);
+        if (newIndex == undefined) {
+          unmount(vNode);
+        } else {
+          patch(vNode, c2[newIndex], el);
+        }
+      }
+
+      // 更新顺序
+      // 先把旧的没有的更新到元素节点上，再使用insertBefore
+      // 处理后元素显示为 a2 b2 c2 d2 e2 f2 g2(新增) k2(新增) h2
+      // 要排序的个数
+      const toBePatched = e2 - s2 + 1;
+      // 倒序插入
+      for(i = toBePatched - 1; i >= 0; i--) {
+        // k2 g2 f2 e2 d2
+        // k2的索引
+        const newIndex = s2 + i;
+        const newChild = c2[newIndex];
+        // k2下一个元素，k2在最后就会没有
+        const anchor = c2[newIndex + 1]?.el;
+        // newChild有el说明旧的（c1）也有此虚拟节点，已经在上面更新了vNode对应的el
+        // 只需要排序的虚拟节点
+        // todo 使用newChild.el判断不一定准确，如果n2在其他地方挂载过，c2里的虚拟节点全部都会有el
+        if (newChild.el) {
+          hostInsert(newChild.el, el, anchor);
+        }
+        // newChild没有el说明旧的（c1）没有此虚拟节点，patch挂载上去
+        else {
+          patch(null, newChild, el, anchor);
+        }
+      }
     }
   };
 
@@ -224,7 +272,7 @@ export function createRenderer(renderOptions) {
     }
   };
 
-  // 比较元素节点的差异
+  // 比较相同元素节点的差异
   const patchElement = (n1, n2, container) => {
     // 复用dom元素
     const el = n2.el = n1.el;
