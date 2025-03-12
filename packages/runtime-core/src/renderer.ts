@@ -209,6 +209,7 @@ export function createRenderer(renderOptions) {
         // newChild有el说明旧的（c1）也有此虚拟节点，已经在上面更新了vNode对应的el
         // 只需要排序的虚拟节点
         // todo 使用newChild.el判断不一定准确，如果n2在其他地方挂载过，c2里的虚拟节点全部都会有el
+        // 就算n2在其他地方挂载过，直接插入就好了
         if (newChild.el) {
           hostInsert(newChild.el, el, anchor);
         }

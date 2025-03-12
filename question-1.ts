@@ -1,3 +1,4 @@
+// reactive里get不能直接用target[key]的原因
 const person = {
   name: "欧兹",
   get aliasName() {
