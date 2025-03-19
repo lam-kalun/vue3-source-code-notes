@@ -1,5 +1,6 @@
 import { ShapeFlags } from "@vue/shared";
 import { isSameVNodeType } from "./vnode";
+import getSequence from "./seq";
 
 export function createRenderer(renderOptions) {
   // 重命名
@@ -172,6 +173,12 @@ export function createRenderer(renderOptions) {
       // 方便判断老的是否在新的里还有，没有就删除，有就更新
       const keyToNewIndexMap = new Map();
 
+      // 排除前后相同项的数组个数
+      const toBePatched = e2 - s2 + 1; // 7 - 3 + 1
+
+      // 映射旧的children的数组下标+1，旧的有，新的没有，就为0
+      const newIndexToOldMapIndex = new Array(toBePatched).fill(0);
+
       // 将新的vNode的key、index放入keyToNewIndexMap
       for (i = s2; i <= e2; i++) {
         // todo c2[e2] 不一定是vNode，要在这让其变为vNode
@@ -189,18 +196,24 @@ export function createRenderer(renderOptions) {
         if (newIndex == undefined) {
           unmount(vNode);
         } else {
+          // 更新相同key的vNode
+          // newIndexToOldMapIndex里为0的项，证明没有相同的，是新的children新增的
+          newIndexToOldMapIndex[newIndex - s2] = i + 1;
           patch(vNode, c2[newIndex], el);
         }
       }
 
       // 更新顺序
+      // 获取不需要移动的、在c1(旧的)有相同key的vNode，在新的children混乱的数组里的下标(不一定和新的children混乱的数组一样长， 一样长就啥都不用动了，只patchProps就行了)
+      const increasingSeq = getSequence(newIndexToOldMapIndex);
+      let j = increasingSeq.length - 1;
       // 先把旧的没有的更新到元素节点上，再使用insertBefore
       // 处理后元素显示为 a2 b2 c2 d2 e2 f2 g2(新增) k2(新增) h2
-      // 要排序的个数
-      const toBePatched = e2 - s2 + 1;
       // 倒序插入
+      // 把要排序的变为一个数组，下标为i
       for(i = toBePatched - 1; i >= 0; i--) {
         // k2 g2 f2 e2 d2
+        // [4, 3, 2, 1, 0]
         // k2的索引
         const newIndex = s2 + i;
         const newChild = c2[newIndex];
@@ -208,10 +221,15 @@ export function createRenderer(renderOptions) {
         const anchor = c2[newIndex + 1]?.el;
         // newChild有el说明旧的（c1）也有此虚拟节点，已经在上面更新了vNode对应的el
         // 只需要排序的虚拟节点
-        // todo 使用newChild.el判断不一定准确，如果n2在其他地方挂载过，c2里的虚拟节点全部都会有el
+        // 使用newChild.el判断不一定准确，如果n2在其他地方挂载过，c2里的虚拟节点全部都会有el
         // 就算n2在其他地方挂载过，直接插入就好了
         if (newChild.el) {
-          hostInsert(newChild.el, el, anchor);
+          // diff算法优化
+          if (i == increasingSeq[j]) {
+            j--;
+          } else {
+            hostInsert(newChild.el, el, anchor);
+          }
         }
         // newChild没有el说明旧的（c1）没有此虚拟节点，patch挂载上去
         else {
