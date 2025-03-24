@@ -14,6 +14,7 @@ var nodeOps = {
   // 创建元素节点
   createElement: (type) => document.createElement(type),
   // 创建文本节点
+  // 可传入文本类型数组
   createText: (text) => document.createTextNode(text),
   // 设置节点的值
   // 如果要设置元素节点的文本，因为文本始终位于文本节点内，所以必须返回文本节点的节点值：el.childNodes[0].nodeValue
@@ -150,6 +151,7 @@ var isVNode = (value) => {
 function isSameVNodeType(n1, n2) {
   return n1.type === n2.type && n1.key === n2.key;
 }
+var Text = Symbol("text");
 
 // packages/runtime-core/src/seq.ts
 function getSequence(arr) {
@@ -285,7 +287,9 @@ function createRenderer(renderOptions2) {
       const newIndexToOldMapIndex = new Array(toBePatched).fill(0);
       for (i = s2; i <= e2; i++) {
         const vNode = c2[i];
-        keyToNewIndexMap.set(vNode.key, i);
+        if (vNode.key !== void 0) {
+          keyToNewIndexMap.set(vNode.key, i);
+        }
       }
       for (let i2 = s1; i2 <= e1; i2++) {
         const vNode = c1[i2];
@@ -358,6 +362,16 @@ function createRenderer(renderOptions2) {
       patchElement(n1, n2, container);
     }
   };
+  const processText = (n1, n2, container, anchor) => {
+    if (n1 == null) {
+      hostInsert(n2.el = hostCreateText(n2.children), container, anchor);
+    } else {
+      if (n1.children !== n2.children) {
+        const el = n2.el = n1.el;
+        hostSetText(el, n2.children);
+      }
+    }
+  };
   const patch = (n1, n2, container, anchor) => {
     if (n1 === n2) {
       return;
@@ -367,7 +381,16 @@ function createRenderer(renderOptions2) {
       unmount(n1);
       n1 = null;
     }
-    processElement(n1, n2, container, anchor);
+    const { type } = n2;
+    switch (type) {
+      case Text:
+        processText(n1, n2, container, anchor);
+        break;
+      // todo组件
+      default:
+        processElement(n1, n2, container, anchor);
+        break;
+    }
   };
   const render2 = (vNode, container) => {
     if (vNode == null) {
@@ -819,6 +842,7 @@ var render = (vNode, container) => {
 };
 export {
   ReactiveEffect,
+  Text,
   activeEffect,
   computed,
   createRenderer,

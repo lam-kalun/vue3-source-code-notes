@@ -1,5 +1,5 @@
 import { ShapeFlags } from "@vue/shared";
-import { isSameVNodeType } from "./vnode";
+import { isSameVNodeType, Text } from "./vnode";
 import getSequence from "./seq";
 
 export function createRenderer(renderOptions) {
@@ -29,7 +29,7 @@ export function createRenderer(renderOptions) {
 
   // 递归挂载儿子元素
   const mountChildren = (children, container) => {
-    // todo暂时只考虑数组里面是h()
+    // todo 暂时只考虑数组里面是h()
     // 如果是number或者string，就先让其变为虚拟节点，再patch
     // 所以如果children是数组，那么经过mountChildren()后，会变为vNode[]
     for (const item of children) {
@@ -183,7 +183,9 @@ export function createRenderer(renderOptions) {
       for (i = s2; i <= e2; i++) {
         // todo c2[e2] 不一定是vNode，要在这让其变为vNode
         const vNode = c2[i];
-        keyToNewIndexMap.set(vNode.key, i);
+        if (vNode.key !== undefined) {
+          keyToNewIndexMap.set(vNode.key, i);
+        }
       }
 
       // 判断老的是否在新的里还有，没有就删除，有就更新页面元素和c2里vNode对应的el
@@ -317,6 +319,18 @@ export function createRenderer(renderOptions) {
     }
   };
 
+  // 处理文本
+  const processText = (n1, n2, container, anchor) => {
+    if (n1 == null) {
+      hostInsert((n2.el = hostCreateText(n2.children)), container, anchor);
+    } else {
+      if (n1.children !== n2.children) {
+        const el = (n2.el = n1.el);
+        hostSetText(el, n2.children);
+      }
+    }
+  };
+ 
   /*
     n1：旧vNode值
     n2：新vNode值
@@ -335,10 +349,21 @@ export function createRenderer(renderOptions) {
       n1 = null;
     }
 
-    // 根据n1.shapeFlag得出1.type，然后处理不同type
-    // 元素
-    processElement(n1, n2, container, anchor);
-    // todo组件
+    // 根据n2.type，处理不同的节点
+    const { type } = n2;
+    switch(type) {
+      case Text: 
+      // 文本
+      // 元素节点比较数组children的时候，会用到anchor
+      processText(n1, n2, container, anchor);
+      break;
+      // todo组件
+      default: 
+      // 元素
+      processElement(n1, n2, container, anchor);
+      break;
+    }
+    
   };
 
   /*

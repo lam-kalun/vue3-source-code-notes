@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id="app" class="app"></div>
+  <script type="module">
+    // 原生的
+    import {
+      // h,
+      // render,
+      // Text
+    } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js';
+
+    // 自己的
+    import {
+      h,
+      render,
+      Text
+    } from './runtime-dom.js';
+
+    // Text节点children里面只能放文本，如果children是数组，里面也只能是文本
+    // render(h(Text, ['ooo', 'water']), app);
+
+    // setTimeout(() => {
+    //   // render(h(Text, 'green'), app);
+    //   render(null, app);
+    // }, 1000);
+
+
+    // 元素节点children数组里，有文本节点
+    render(h('div', [h('div', 'ooo'), h('div', 'water'), h('div', 'Phoenix')]), app);
+
+    setTimeout(() => {
+      render(h('div', [h('div', 'ooo'), h(Text, 'green'), h('div', 'Phoenix')]), app);
+    }, 1000);
+  </script>
+</body>
+</html>

@@ -12,6 +12,7 @@ export const nodeOps = {
   // 创建元素节点
   createElement: (type) => document.createElement(type),
   // 创建文本节点
+  // 可传入文本类型数组
   createText: (text) => document.createTextNode(text),
   // 设置节点的值
   // 如果要设置元素节点的文本，因为文本始终位于文本节点内，所以必须返回文本节点的节点值：el.childNodes[0].nodeValue
