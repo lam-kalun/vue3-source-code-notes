@@ -243,6 +243,7 @@ export function createRenderer(renderOptions) {
 
   // 比较children(直接处理对应的el元素)
   const patchChildren = (n1, n2, el) => {
+    // 只有n1、n2都是元素节点才走这里，所以shapeFlag是元素节点和children的节点或运算出来的
     // n1是旧的，n2是新的
     const c1 = n1.children; // 因为上一次mountChildren做过处理，c1必定是vNode[]
     const c2 = n2.children;
