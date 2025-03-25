@@ -1,4 +1,4 @@
-import { isString } from '@vue/shared';
+import { isObject, isString } from '@vue/shared';
 import { createVNode, isVNode } from './vnode';
 
 export function h(type, propsOrChildren?, children?) {
@@ -11,13 +11,16 @@ export function h(type, propsOrChildren?, children?) {
   // 1、2.1、3.1、3.2可以正常调用createVNode
   // 如果儿子是虚拟对象，就变为数组
   if (l === 2) {
-    // 2.4
-    if (isVNode(propsOrChildren)) {
-      return createVNode(type, null, [propsOrChildren]);
-    }
-    // 2.2、2.3
-    if (isString(propsOrChildren) || Array.isArray(propsOrChildren)) {
-      return createVNode(type, null, propsOrChildren);
+    if (isObject(propsOrChildren) && !Array.isArray(propsOrChildren)) {
+      // 2.4
+      if (isVNode(propsOrChildren)) {
+        return createVNode(type, null, [propsOrChildren])
+      }
+      // 2.1
+      return createVNode(type, propsOrChildren)
+    } else {
+      // 2.2、2.3
+      return createVNode(type, null, propsOrChildren)
     }
   } else if (l === 3) {
     // 3.3
@@ -28,6 +31,6 @@ export function h(type, propsOrChildren?, children?) {
     // 4.1 4.2
     return createVNode(type, propsOrChildren, Array.from(arguments).slice(2));
   }
-  // 1、2.1、3.1、3.2
+  // 1、3.1、3.2
   return createVNode(type, propsOrChildren, children);
 };
