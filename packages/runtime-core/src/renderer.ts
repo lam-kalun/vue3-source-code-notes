@@ -1,6 +1,7 @@
 import { ShapeFlags } from "@vue/shared";
 import { Fragment, isSameVNodeType, Text } from "./vnode";
 import getSequence from "./seq";
+import { reactive, ReactiveEffect } from '@vue/reactivity';
 
 export function createRenderer(renderOptions) {
   // 重命名
@@ -341,10 +342,61 @@ export function createRenderer(renderOptions) {
   const processFragment = (n1, n2, container, anchor) => {
     if (n1 == null) {
       // n2.children肯定是数组
-      // 和processElement、processText相比，少了给n2.el赋值，所以Fragment的vNode没有el
+      // 和processElement、processText相比，不会创建n2.type的节点，所以少了给n2.el赋值，Fragment的vNode没有el
+      // 正常mountChildren的container入参是根据n2.type创建的节点，再把根据n2.type创建的节点放入render的container，这里直接是把children放入render的container
       mountChildren(n2.children, container);
     } else {
       patchChildren(n1, n2, container);
+    }
+  };
+
+  // 比较组件
+  const patchComponent = () => {};
+
+  // 挂载组件
+  const mountComponent = (n2, container, anchor) => {
+    const { data = () => {}, render } = n2.type;
+    const state = reactive(data());
+    const instance = {
+      state, // 状态(组件里的响应式data)
+      vnode: n2, // 组件的虚拟节点
+      subtree: null, // 子树
+      isMounted: false, // 是否挂载完成
+      update: null // 组件更新的函数
+    };
+    
+    // 组件更新函数
+    const componentUpdateFn = () => {
+      // 基于状态更新组件
+      // 第一次更新
+      if (!instance.isMounted) {
+        const subtree = render.call(state, state);
+        patch(null, subtree, container, anchor);
+        instance.isMounted = true;
+        instance.subtree = subtree;
+      } else {
+        const subtree = render.call(state, state);
+        patch(instance.subtree, subtree, container, anchor);
+        instance.subtree = subtree;
+      }
+    };
+
+    // 使用effect保证state改变后，重新执行渲染(componentUpdateFn)
+    const effect = new ReactiveEffect(componentUpdateFn, () => { update() });
+
+    const update = ( instance.update = () => { effect.run(); } )
+
+    update();
+  };
+
+  // 处理组件
+  // 组件会有两个虚拟节点，一个h(VueComponent)对象，一个组件里render返回的h()
+  // html模版，最后也会解析成render函数返回的h()
+  const processComponent = (n1, n2, container, anchor) => {
+    if (n1 == null) {
+      mountComponent(n2, container, anchor);
+    } else {
+      patchComponent();
     }
   };
  
@@ -369,7 +421,7 @@ export function createRenderer(renderOptions) {
     // 根据n2.type，处理不同的节点
     const { type } = n2;
     switch(type) {
-      case Text: 
+      case Text:
         // 文本
         // 元素节点比较数组children的时候，会用到anchor
         processText(n1, n2, container, anchor);
@@ -377,10 +429,15 @@ export function createRenderer(renderOptions) {
       case Fragment:
         processFragment(n1, n2, container, anchor);
         break;
-      // todo组件
-      default: 
+      default:
         // 元素
-        processElement(n1, n2, container, anchor);
+        if (type & ShapeFlags.ELEMENT) {
+          processElement(n1, n2, container, anchor);
+        }
+        // 组件
+        else if (type & ShapeFlags.COMPONENT) {
+          processComponent(n1, n2, container, anchor);
+        }
         break;
     }
     

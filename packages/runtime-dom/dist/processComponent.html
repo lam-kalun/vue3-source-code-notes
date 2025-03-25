@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id="app" class="app"></div>
+  <script type="module">
+    // 原生的
+    import {
+      h,
+      render,
+      Text,
+      Fragment
+    } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js';
+
+    // 自己的
+    import {
+      // h,
+      // render,
+      // Text,
+      // Fragment
+    } from './runtime-dom.js';
+
+    const VueComponent = {
+      data() {
+        return { name: 'zo', age: 1625 };
+      },
+      render(proxy) {
+        // 只是例子，实际不能在render里更改data
+        setTimeout(() => {
+          this.age++;
+        }, 1000);
+        return h(Fragment, [
+          h(Text, this.name),
+          h('span', this.age)
+        ]);
+      }
+    };
+
+    render(h(VueComponent), app);
+  </script>
+</body>
+</html>
