@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id="app" class="app"></div>
+  <script type="module">
+    // 原生的
+    import {
+      // h,
+      // render,
+      // Fragment
+    } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js';
+
+    // 自己的
+    import {
+      h,
+      render,
+      Fragment,
+      Text
+    } from './runtime-dom.js';
+
+    // const fragment = h(Fragment, [h(Text, 'ooo')]);
+    // render(fragment, app);
+    // console.log(fragment);
+
+    render(h(Fragment, [h('div', '我是第一个div'), h('div', '我是第二个div')]), app);
+    setTimeout(() => {
+      // render(null, app);
+      render(h(Fragment, [h('div', '我是第一个div'), h('a', '我是第二个a')]), app);
+    }, 1000);
+    
+  </script>
+</body>
+</html>

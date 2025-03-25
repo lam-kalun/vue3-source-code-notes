@@ -1,5 +1,5 @@
 import { ShapeFlags } from "@vue/shared";
-import { isSameVNodeType, Text } from "./vnode";
+import { Fragment, isSameVNodeType, Text } from "./vnode";
 import getSequence from "./seq";
 
 export function createRenderer(renderOptions) {
@@ -17,7 +17,12 @@ export function createRenderer(renderOptions) {
   } = renderOptions;
  
   const unmount = (vNode) => {
-    hostRemove(vNode.el);
+    // Fragment类型的vNode没有el，要一个个把它的children删除
+    if (vNode.type === Fragment) {
+      unmountChildren(vNode.children);
+    } else {
+      hostRemove(vNode.el);
+    }
   };
 
   // 移除数组虚拟节点
@@ -27,7 +32,7 @@ export function createRenderer(renderOptions) {
     }
   };
 
-  // 递归挂载儿子元素
+  // 递归挂载儿子(数组类型)元素
   const mountChildren = (children, container) => {
     // todo 暂时只考虑数组里面是h()
     // 如果是number或者string，就先让其变为虚拟节点，再patch
@@ -331,6 +336,17 @@ export function createRenderer(renderOptions) {
       }
     }
   };
+
+  // 处理Fragment
+  const processFragment = (n1, n2, container, anchor) => {
+    if (n1 == null) {
+      // n2.children肯定是数组
+      // 和processElement、processText相比，少了给n2.el赋值，所以Fragment的vNode没有el
+      mountChildren(n2.children, container);
+    } else {
+      patchChildren(n1, n2, container);
+    }
+  };
  
   /*
     n1：旧vNode值
@@ -354,15 +370,18 @@ export function createRenderer(renderOptions) {
     const { type } = n2;
     switch(type) {
       case Text: 
-      // 文本
-      // 元素节点比较数组children的时候，会用到anchor
-      processText(n1, n2, container, anchor);
-      break;
+        // 文本
+        // 元素节点比较数组children的时候，会用到anchor
+        processText(n1, n2, container, anchor);
+        break;
+      case Fragment:
+        processFragment(n1, n2, container, anchor);
+        break;
       // todo组件
       default: 
-      // 元素
-      processElement(n1, n2, container, anchor);
-      break;
+        // 元素
+        processElement(n1, n2, container, anchor);
+        break;
     }
     
   };

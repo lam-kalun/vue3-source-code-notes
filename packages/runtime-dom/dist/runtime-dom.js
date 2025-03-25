@@ -151,7 +151,8 @@ var isVNode = (value) => {
 function isSameVNodeType(n1, n2) {
   return n1.type === n2.type && n1.key === n2.key;
 }
-var Text = Symbol("text");
+var Text = Symbol("Text");
+var Fragment = Symbol("Fragment");
 
 // packages/runtime-core/src/seq.ts
 function getSequence(arr) {
@@ -207,7 +208,11 @@ function createRenderer(renderOptions2) {
     patchProp: hostPatchProp
   } = renderOptions2;
   const unmount = (vNode) => {
-    hostRemove(vNode.el);
+    if (vNode.type === Fragment) {
+      unmountChildren(vNode.children);
+    } else {
+      hostRemove(vNode.el);
+    }
   };
   const unmountChildren = (children) => {
     for (let i = 0; i < children.length; i++) {
@@ -372,6 +377,13 @@ function createRenderer(renderOptions2) {
       }
     }
   };
+  const processFragment = (n1, n2, container, anchor) => {
+    if (n1 == null) {
+      mountChildren(n2.children, container);
+    } else {
+      patchChildren(n1, n2, container);
+    }
+  };
   const patch = (n1, n2, container, anchor) => {
     if (n1 === n2) {
       return;
@@ -385,6 +397,9 @@ function createRenderer(renderOptions2) {
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor);
+        break;
+      case Fragment:
+        processFragment(n1, n2, container, anchor);
         break;
       // todo组件
       default:
@@ -841,6 +856,7 @@ var render = (vNode, container) => {
   return createRenderer(renderOptions).render(vNode, container);
 };
 export {
+  Fragment,
   ReactiveEffect,
   Text,
   activeEffect,

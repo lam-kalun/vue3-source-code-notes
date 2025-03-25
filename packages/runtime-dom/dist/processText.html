@@ -23,8 +23,8 @@
     } from './runtime-dom.js';
 
     // Text节点children里面只能放文本，如果children是数组，里面也只能是文本
-    const textNode = h(Text, 'ooo');
-    console.log(textNode);
+    // const textNode = h(Text, 'ooo');
+    // console.log(textNode);
     
 
     // render(h(Text, 'ooo'), app);
@@ -35,14 +35,14 @@
 
 
     // 元素节点children数组里，有文本节点
-    // render(h('div', [h('div', 'ooo'), h(Text, 'water'), h('div', 'Phoenix')]), app);
+    render(h('div', [h('div', 'ooo'), h(Text, 'water'), h('div', 'Phoenix')]), app);
     // // render(h(Text, 'ooo'), app);
 
 
-    // setTimeout(() => {
-    //   render(h('div', [h('div', 'ooo'), h(Text, 'green'), h('div', 'Phoenix')]), app);
-    //   // render(h(Text, 'ooo'), app);
-    // }, 1000);
+    setTimeout(() => {
+      // render(h('div', [h('div', 'ooo'), h(Text, 'green'), h('div', 'Phoenix')]), app);
+      render(h(Text, 'ooo'), app);
+    }, 1000);
   </script>
 </body>
 </html>
