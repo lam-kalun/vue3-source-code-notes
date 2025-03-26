@@ -122,6 +122,8 @@ var isNumber = (value) => {
 var isString = (value) => {
   return typeof value === "string";
 };
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+var hasOwn = (val, key) => hasOwnProperty.call(val, key);
 
 // packages/runtime-core/src/vnode.ts
 function createVNode(type, props, children) {
@@ -816,30 +818,83 @@ function createRenderer(renderOptions2) {
   };
   const patchComponent = () => {
   };
-  const mountComponent = (n2, container, anchor) => {
+  const initProps = (instance, rawProps) => {
+    const props = {};
+    const attrs = {};
+    const propsOptions = instance.propsOptions || {};
+    if (rawProps) {
+      for (let key in rawProps) {
+        const value = rawProps[key];
+        if (propsOptions[key]) {
+          props[key] = value;
+        } else {
+          attrs[key] = value;
+        }
+      }
+      instance.props = reactive(props);
+      instance.attrs = attrs;
+    }
+  };
+  const mountComponent = (vNode, container, anchor) => {
     const { data = () => {
-    }, render: render3 } = n2.type;
+    }, render: render3, props: propsOptions = {} } = vNode.type;
     const state = reactive(data());
     const instance = {
       state,
       // 状态(组件里的响应式data)
-      vnode: n2,
+      vNode,
       // 组件的虚拟节点
       subtree: null,
       // 子树
       isMounted: false,
       // 是否挂载完成
-      update: null
+      update: null,
       // 组件更新的函数
+      props: {},
+      attrs: {},
+      propsOptions,
+      // 用户定义的props
+      component: null,
+      proxy: null
+      // 用来代理 data、props、attrs让用户使用更加方便
     };
+    vNode.component = instance;
+    initProps(instance, vNode.props);
+    const publicPrototype = {
+      $attrs: (instance2) => instance2.attrs
+    };
+    instance.proxy = new Proxy(instance, {
+      get(target, key) {
+        const { state: state2, props } = target;
+        if (state2 && hasOwn(state2, key)) {
+          return state2[key];
+        } else if (props && hasOwn(props, key)) {
+          return props[key];
+        }
+        const getter = publicPrototype[key];
+        if (getter) {
+          return getter(target);
+        }
+      },
+      set(target, key, value) {
+        const { state: state2, props } = target;
+        if (state2 && hasOwn(state2, key)) {
+          state2[key] = value;
+        } else if (props && hasOwn(props, key)) {
+          console.warn("props are readonly");
+          return false;
+        }
+        return true;
+      }
+    });
     const componentUpdateFn = () => {
       if (!instance.isMounted) {
-        const subtree = render3.call(state, state);
+        const subtree = render3.call(instance.proxy, instance.proxy);
         patch(null, subtree, container, anchor);
         instance.isMounted = true;
         instance.subtree = subtree;
       } else {
-        const subtree = render3.call(state, state);
+        const subtree = render3.call(instance.proxy, instance.proxy);
         patch(instance.subtree, subtree, container, anchor);
         instance.subtree = subtree;
       }

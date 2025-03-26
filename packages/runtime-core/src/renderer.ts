@@ -1,4 +1,4 @@
-import { ShapeFlags } from "@vue/shared";
+import { hasOwn, ShapeFlags } from "@vue/shared";
 import { Fragment, isSameVNodeType, Text } from "./vnode";
 import getSequence from "./seq";
 import { reactive, ReactiveEffect } from '@vue/reactivity';
@@ -354,29 +354,97 @@ export function createRenderer(renderOptions) {
   // 比较组件
   const patchComponent = () => {};
 
+  // 初始化组件属性
+  const initProps = (instance, rawProps) => {
+    const props = {};
+    const attrs = {};
+    // 用户在组件里自定义的
+    const propsOptions = instance.propsOptions || {};
+
+    if (rawProps) {
+      for (let key in rawProps) {
+        const value = rawProps[key];
+        if (propsOptions[key]) {
+          props[key] = value;
+        } else {
+          attrs[key] = value;
+        }
+      }
+      
+      // todo 应该为shallowReactive
+      // props不需要深度代理，组件不能改变props
+      instance.props = reactive(props);
+      instance.attrs = attrs;
+    }
+  };
+
   // 挂载组件
-  const mountComponent = (n2, container, anchor) => {
-    const { data = () => {}, render } = n2.type;
+  const mountComponent = (vNode, container, anchor) => {
+    const { data = () => {}, render, props: propsOptions = {} } = vNode.type;
     const state = reactive(data());
     const instance = {
       state, // 状态(组件里的响应式data)
-      vnode: n2, // 组件的虚拟节点
+      vNode, // 组件的虚拟节点
       subtree: null, // 子树
       isMounted: false, // 是否挂载完成
-      update: null // 组件更新的函数
+      update: null, // 组件更新的函数
+      props: {},
+      attrs: {},
+      propsOptions, // 用户定义的props
+      component: null,
+      proxy: null, // 用来代理 data、props、attrs让用户使用更加方便
     };
+
+    // 元素更新 n2.el = n1.el
+    // 组件更新 n2.component.subtree.el = n1.component.subtree.el
+    vNode.component = instance;
+
+    // 根据propsOptions来区分出props和attrs
+    // vNode.props全量的props，如果propsOptions有定义就放入instance.props
+    initProps(instance, vNode.props);
+
+    const publicPrototype = {
+      $attrs: instance => instance.attrs,
+    };
+
+    instance.proxy = new Proxy(instance, {
+      get(target, key) {
+        const { state, props } = target;
+        if (state && hasOwn(state, key)) {
+          return state[key];
+        } else if (props && hasOwn(props, key)) {
+          return props[key];
+        }
+        // 一些无法修改的属性，$slots、$attrs
+        const getter = publicPrototype[key];
+        if (getter) {
+          return getter(target);
+        }
+      },
+      set(target, key, value) {
+        const { state, props } = target;
+        if (state && hasOwn(state, key)) {
+          state[key] = value;
+        } else if (props && hasOwn(props, key)) {
+          // 可以修改props中的嵌套属性（内部不报错），但是不合法
+          console.warn("props are readonly");
+          return false;
+        }
+        return true;
+      }
+    });
     
     // 组件更新函数
     const componentUpdateFn = () => {
       // 基于状态更新组件
       // 第一次更新
       if (!instance.isMounted) {
-        const subtree = render.call(state, state);
+        const subtree = render.call(instance.proxy, instance.proxy);
         patch(null, subtree, container, anchor);
         instance.isMounted = true;
         instance.subtree = subtree;
       } else {
-        const subtree = render.call(state, state);
+        const subtree = render.call(instance.proxy, instance.proxy);
         patch(instance.subtree, subtree, container, anchor);
         instance.subtree = subtree;
       }
