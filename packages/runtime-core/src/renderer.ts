@@ -2,6 +2,7 @@ import { ShapeFlags } from "@vue/shared";
 import { Fragment, isSameVNodeType, Text } from "./vnode";
 import getSequence from "./seq";
 import { reactive, ReactiveEffect } from '@vue/reactivity';
+import { queueJob } from "./scheduler";
 
 export function createRenderer(renderOptions) {
   // 重命名
@@ -382,9 +383,9 @@ export function createRenderer(renderOptions) {
     };
 
     // 使用effect保证state改变后，重新执行渲染(componentUpdateFn)
-    const effect = new ReactiveEffect(componentUpdateFn, () => { update() });
+    const effect = new ReactiveEffect( componentUpdateFn, () => { queueJob(update) } );
 
-    const update = ( instance.update = () => { effect.run(); } )
+    const update = ( instance.update = () => effect.run() )
 
     update();
   };
@@ -419,7 +420,7 @@ export function createRenderer(renderOptions) {
     }
 
     // 根据n2.type，处理不同的节点
-    const { type } = n2;
+    const { type, shapeFlag } = n2;
     switch(type) {
       case Text:
         // 文本
@@ -431,11 +432,11 @@ export function createRenderer(renderOptions) {
         break;
       default:
         // 元素
-        if (type & ShapeFlags.ELEMENT) {
+        if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(n1, n2, container, anchor);
         }
         // 组件
-        else if (type & ShapeFlags.COMPONENT) {
+        else if (shapeFlag & ShapeFlags.COMPONENT) {
           processComponent(n1, n2, container, anchor);
         }
         break;

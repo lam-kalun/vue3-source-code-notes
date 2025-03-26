@@ -125,7 +125,7 @@ var isString = (value) => {
 
 // packages/runtime-core/src/vnode.ts
 function createVNode(type, props, children) {
-  const shapeFlag = isString(type) ? 1 /* ELEMENT */ ? isObject(type) : 4 /* STATEFUL_COMPONENT */ : 0;
+  const shapeFlag = isString(type) ? 1 /* ELEMENT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
   const vNode = {
     __v_isVNode: true,
     type,
@@ -602,6 +602,28 @@ function doWatch(source, cb, { deep, immediate }) {
   return () => effect2.stop();
 }
 
+// packages/runtime-core/src/scheduler.ts
+var queue = [];
+var isFlushing = false;
+var resolvedPromise = Promise.resolve();
+function queueJob(job) {
+  if (!queue.includes(job)) {
+    queue.push(job);
+  }
+  if (!isFlushing) {
+    isFlushing = true;
+    resolvedPromise.then(() => {
+      isFlushing = false;
+      const copy = queue.slice(0);
+      queue.length = 0;
+      copy.forEach((job2) => {
+        job2();
+      });
+      copy.length = 0;
+    });
+  }
+}
+
 // packages/runtime-core/src/renderer.ts
 function createRenderer(renderOptions2) {
   const {
@@ -823,11 +845,9 @@ function createRenderer(renderOptions2) {
       }
     };
     const effect2 = new ReactiveEffect(componentUpdateFn, () => {
-      update();
+      queueJob(update);
     });
-    const update = instance.update = () => {
-      effect2.run();
-    };
+    const update = instance.update = () => effect2.run();
     update();
   };
   const processComponent = (n1, n2, container, anchor) => {
@@ -846,7 +866,7 @@ function createRenderer(renderOptions2) {
       unmount(n1);
       n1 = null;
     }
-    const { type } = n2;
+    const { type, shapeFlag } = n2;
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor);
@@ -855,9 +875,9 @@ function createRenderer(renderOptions2) {
         processFragment(n1, n2, container, anchor);
         break;
       default:
-        if (type & 1 /* ELEMENT */) {
+        if (shapeFlag & 1 /* ELEMENT */) {
           processElement(n1, n2, container, anchor);
-        } else if (type & 6 /* COMPONENT */) {
+        } else if (shapeFlag & 6 /* COMPONENT */) {
           processComponent(n1, n2, container, anchor);
         }
         break;
@@ -882,10 +902,12 @@ function createRenderer(renderOptions2) {
 function h(type, propsOrChildren, children) {
   const l = arguments.length;
   if (l === 2) {
-    if (isVNode(propsOrChildren)) {
-      return createVNode(type, null, [propsOrChildren]);
-    }
-    if (isString(propsOrChildren) || Array.isArray(propsOrChildren)) {
+    if (isObject(propsOrChildren) && !Array.isArray(propsOrChildren)) {
+      if (isVNode(propsOrChildren)) {
+        return createVNode(type, null, [propsOrChildren]);
+      }
+      return createVNode(type, propsOrChildren);
+    } else {
       return createVNode(type, null, propsOrChildren);
     }
   } else if (l === 3) {

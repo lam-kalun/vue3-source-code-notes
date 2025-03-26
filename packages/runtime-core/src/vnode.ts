@@ -4,8 +4,8 @@ export function createVNode(type, props, children?) {
   // 元素节点1 文本节点0
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
-    ? isObject(type)
-    : ShapeFlags.STATEFUL_COMPONENT
+    : isObject(type)
+    ? ShapeFlags.STATEFUL_COMPONENT
     : 0;
 
   const vNode = {
