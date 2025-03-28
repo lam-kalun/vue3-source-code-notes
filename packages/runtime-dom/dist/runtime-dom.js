@@ -653,6 +653,7 @@ function createComponentInstance(vNode) {
 }
 var publicPrototype = {
   $attrs: (instance) => instance.attrs
+  // ...
 };
 var handler = {
   get(target, key) {
@@ -897,7 +898,18 @@ function createRenderer(renderOptions2) {
       patchChildren(n1, n2, container);
     }
   };
-  const patchComponent = () => {
+  const updateProps = (instance, prevProps, nextProps) => {
+    const { propsOptions } = instance;
+    if (hasPropsChange(prevProps, nextProps)) {
+      for (let key in nextProps) {
+      }
+    }
+  };
+  const updateComponent = (n1, n2) => {
+    const instance = n2.component = n1.component;
+    const { props: prevProps } = n1;
+    const { props: nextProps } = n2;
+    updateProps(instance, prevProps, nextProps);
   };
   const setupRenderEffect = (instance, container, anchor) => {
     const { render: render3 } = instance;
@@ -928,7 +940,7 @@ function createRenderer(renderOptions2) {
     if (n1 == null) {
       mountComponent(n2, container, anchor);
     } else {
-      patchComponent();
+      updateComponent(n1, n2);
     }
   };
   const patch = (n1, n2, container, anchor) => {

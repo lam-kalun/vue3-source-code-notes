@@ -21,6 +21,7 @@ export function createComponentInstance(vNode) {
 
 const publicPrototype = {
   $attrs: instance => instance.attrs,
+  // ...
 };
 
 const handler = {

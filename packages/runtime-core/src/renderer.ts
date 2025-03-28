@@ -1,7 +1,7 @@
-import { hasOwn, ShapeFlags } from "@vue/shared";
+import { ShapeFlags } from "@vue/shared";
 import { Fragment, isSameVNodeType, Text } from "./vnode";
 import getSequence from "./seq";
-import { reactive, ReactiveEffect } from '@vue/reactivity';
+import { ReactiveEffect } from '@vue/reactivity';
 import { queueJob } from "./scheduler";
 import { createComponentInstance, setupComponent } from "./component";
 
@@ -352,8 +352,29 @@ export function createRenderer(renderOptions) {
     }
   };
 
+  // 比较组件属性
+  const updateProps = (instance, prevProps, nextProps) => {
+    // todo 源码里有用propsOptions区分更新instance.attrs和instance.props
+    const { propsOptions } = instance;
+
+    if (hasPropsChange(prevProps, nextProps)) {
+      // 老思路
+      // 赋值新的，去掉老的
+      for (let key in nextProps) {
+        
+      }
+    }
+  };
+
   // 比较组件
-  const patchComponent = () => {};
+  const updateComponent = (n1, n2) => {
+    const instance = (n2.component = n1.component);
+
+    const { props: prevProps } = n1;
+    const { props: nextProps } = n2;
+
+    updateProps(instance, prevProps, nextProps);
+  };
 
   const setupRenderEffect = (instance, container, anchor) => {
     const { render } = instance;
@@ -402,7 +423,7 @@ export function createRenderer(renderOptions) {
     if (n1 == null) {
       mountComponent(n2, container, anchor);
     } else {
-      patchComponent();
+      updateComponent(n1, n2);
     }
   };
  
