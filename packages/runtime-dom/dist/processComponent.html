@@ -52,16 +52,14 @@
         age: Number
       },
       data() {
-        return { x: 'x', y: 'y' };
+        return { x: 'x', y: 'y', propsName: `这是props里的name属性：${this.name}` };
       },
       render(proxy) {
-        console.log(proxy);
-        
         // data、props直接proxy.获取，attrs要proxy.$attrs.获取
         // data可以修改（也不推荐在render里修改），props不能修改
         return h('div', [
-          h(Text, proxy.x),
-          h('span', proxy.y)
+          h(Text, this.name),
+          h('span', this.age)
         ])
       }
     };
