@@ -1,7 +1,7 @@
 import { isObject, isString, ShapeFlags } from "@vue/shared";
 
 export function createVNode(type, props, children?) {
-  // 元素节点1 文本节点0
+  // 元素节点1 组件节点4 其他节点0
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
     : isObject(type)

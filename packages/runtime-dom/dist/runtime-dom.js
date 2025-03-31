@@ -700,9 +700,11 @@ function setupComponent(instance) {
   const { vNode } = instance;
   initProps(instance, vNode.props);
   instance.proxy = new Proxy(instance, handler);
-  const { data, render: render2 } = vNode.type;
+  let { data, render: render2 } = vNode.type;
   if (!isFunction(data)) {
-    return console.warn("data option must be a function");
+    console.warn("data option must be a function");
+    data = () => {
+    };
   }
   instance.data = reactive(data.call(instance.proxy));
   instance.render = render2;
@@ -898,10 +900,33 @@ function createRenderer(renderOptions2) {
       patchChildren(n1, n2, container);
     }
   };
+  const hasPropsChange = (prevProps, nextProps) => {
+    const nKeys = Object.keys(nextProps);
+    if (nKeys.length !== Object.keys(prevProps).length) {
+      return true;
+    }
+    for (let key of nKeys) {
+      if (nextProps[key] !== prevProps[key]) {
+        return true;
+      }
+    }
+    return false;
+  };
   const updateProps = (instance, prevProps, nextProps) => {
     const { propsOptions } = instance;
     if (hasPropsChange(prevProps, nextProps)) {
       for (let key in nextProps) {
+        if (propsOptions[key]) {
+          instance.props[key] = nextProps[key];
+        } else {
+          instance.attrs[key] = nextProps[key];
+        }
+      }
+      for (let key in prevProps) {
+        if (!hasOwn(nextProps, key)) {
+          delete instance.props[key];
+          delete instance.attrs[key];
+        }
       }
     }
   };

@@ -10,18 +10,18 @@
   <script type="module">
     // 原生的
     import {
-      h,
-      render,
-      Text,
-      Fragment
-    } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.prod.js';
-
-    // 自己的
-    import {
       // h,
       // render,
       // Text,
       // Fragment
+    } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.prod.js';
+
+    // 自己的
+    import {
+      h,
+      render,
+      Text,
+      Fragment
     } from './runtime-dom.js';
 
     // const VueComponent = {
@@ -45,27 +45,52 @@
 
     // 属性
     // attrs(非响应式的) props(响应式的)
-    const VueComponent = {
+    // const VueComponent = {
+    //   props: {
+    //     // defineProps
+    //     name: String,
+    //     age: Number
+    //   },
+    //   data() {
+    //     return { x: 'x', y: 'y', propsName: `这是props里的name属性：${this.name}` };
+    //   },
+    //   render(proxy) {
+    //     console.log(proxy);
+        
+    //     // data、props直接proxy.获取，attrs要proxy.$attrs.获取
+    //     // data可以修改（也不推荐在render里修改），props不能修改
+    //     return h('div', [
+    //       h(Text, this.name),
+    //       h('span', this.age)
+    //     ])
+    //   }
+    // };
+    // render(h(VueComponent, { a: 1, b: 2, name: 'zio', age: 1043 }), app);
+
+
+    // data、props、slots更新后，组件也会更新
+    // 通过属性更新组件
+    const RenderComponent = {
       props: {
-        // defineProps
-        name: String,
-        age: Number
-      },
-      data() {
-        return { x: 'x', y: 'y', propsName: `这是props里的name属性：${this.name}` };
+        address: String
       },
       render(proxy) {
-        console.log(proxy);
-        
-        // data、props直接proxy.获取，attrs要proxy.$attrs.获取
-        // data可以修改（也不推荐在render里修改），props不能修改
-        return h('div', [
-          h(Text, this.name),
-          h('span', this.age)
-        ])
+        return h(Text, this.address);
       }
     };
-    render(h(VueComponent, { a: 1, b: 2, name: 'zio', age: 1043 }), app);
+    const VueComponent = {
+      data() {
+        return { flag: true };
+      },
+      render(proxy) {
+        return h(Fragment, [
+          h('button', { onClick: () => { this.flag = !this.flag } }, 'hit me'),
+          // 实验不是用户定义的props，也被放入instance.props了
+          h(RenderComponent, { address: this.flag ? 'zio' : 'ded', a: this.flag ? 1 : 2})
+        ]);
+      }
+    };
+    render(h(VueComponent), app);
   </script>
 </body>
 </html>

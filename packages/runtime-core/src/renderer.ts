@@ -1,4 +1,4 @@
-import { ShapeFlags } from "@vue/shared";
+import { hasOwn, ShapeFlags } from "@vue/shared";
 import { Fragment, isSameVNodeType, Text } from "./vnode";
 import getSequence from "./seq";
 import { ReactiveEffect } from '@vue/reactivity';
@@ -352,6 +352,21 @@ export function createRenderer(renderOptions) {
     }
   };
 
+  // 判断组件属性是否变了
+  const hasPropsChange = (prevProps, nextProps) => {
+    const nKeys = Object.keys(nextProps);
+    // 长度不一样肯定变了
+    if (nKeys.length !== Object.keys(prevProps).length) {
+      return true;
+    }
+    for (let key of nKeys) {
+      if (nextProps[key] !== prevProps[key]) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   // 比较组件属性
   const updateProps = (instance, prevProps, nextProps) => {
     // todo 源码里有用propsOptions区分更新instance.attrs和instance.props
@@ -361,7 +376,18 @@ export function createRenderer(renderOptions) {
       // 老思路
       // 赋值新的，去掉老的
       for (let key in nextProps) {
-        
+        if (propsOptions[key]) {
+          instance.props[key] = nextProps[key];
+        } else {
+          instance.attrs[key] = nextProps[key];
+        }
+      }
+
+      for (let key in prevProps) {
+        if (!hasOwn(nextProps, key)) {
+          delete instance.props[key];
+          delete instance.attrs[key];
+        }
       }
     }
   };
