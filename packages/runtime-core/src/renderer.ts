@@ -333,8 +333,9 @@ export function createRenderer(renderOptions) {
     if (n1 == null) {
       hostInsert((n2.el = hostCreateText(n2.children)), container, anchor);
     } else {
+      // 不管children一样不一样，都要复用el
+      const el = (n2.el = n1.el);
       if (n1.children !== n2.children) {
-        const el = (n2.el = n1.el);
         hostSetText(el, n2.children);
       }
     }
@@ -353,7 +354,13 @@ export function createRenderer(renderOptions) {
   };
 
   // 判断组件属性是否变了
-  const hasPropsChange = (prevProps, nextProps) => {
+  const hasPropsChanged = (prevProps, nextProps) => {
+    if (!prevProps) {
+      return !!nextProps
+    }
+    if (!nextProps) {
+      return true
+    }
     const nKeys = Object.keys(nextProps);
     // 长度不一样肯定变了
     if (nKeys.length !== Object.keys(prevProps).length) {
@@ -369,10 +376,10 @@ export function createRenderer(renderOptions) {
 
   // 比较组件属性
   const updateProps = (instance, prevProps, nextProps) => {
-    // todo 源码里有用propsOptions区分更新instance.attrs和instance.props
+    // 源码里有用propsOptions区分更新instance.attrs和instance.props
     const { propsOptions } = instance;
 
-    if (hasPropsChange(prevProps, nextProps)) {
+    if (hasPropsChanged(prevProps, nextProps)) {
       // 老思路
       // 赋值新的，去掉老的
       for (let key in nextProps) {
@@ -392,13 +399,50 @@ export function createRenderer(renderOptions) {
     }
   };
 
+  // 判断是否有插槽、属性是否有变化，如果有就更新组件
+  const shouldComponentUpdate = (n1, n2) => {
+    const { props: prevProps, children: prevChildren } = n1;
+    const { props: nextProps, children: nextChildren } = n2;
+
+    // 有插槽就需要更新
+    if (prevChildren || nextChildren) return true;
+
+    if (prevProps === nextProps) return false;
+
+    if (!prevProps) {
+      return !!nextProps
+    }
+    if (!nextProps) {
+      return true
+    }
+
+    return hasPropsChanged(prevProps, nextProps);
+  };
+
   // 比较组件
   const updateComponent = (n1, n2) => {
     const instance = (n2.component = n1.component);
 
-    const { props: prevProps } = n1;
-    const { props: nextProps } = n2;
+    if (shouldComponentUpdate(n1, n2)) {
+      instance.next = n2; // 如果调用update时，有next属性，说明属性or插槽也有更新
+      // 不会同时多次触发，详情看componentUpdateFn
+      instance.update(); // 把属性、插槽更新逻辑，统一放在effect的fn里
+    }
 
+    // vue2的老方法
+    // const { props: prevProps } = n1;
+    // const { props: nextProps } = n2;
+
+    // updateProps(instance, prevProps, nextProps);
+  };
+
+  // 根据n2更新组件实例
+  const updateComponentPreRender = (instance, next) => {
+    instance.next = null;
+    const { props: prevProps } = instance.vNode;
+    const { props: nextProps } = next;
+    instance.vNode = next;
+    // 此时effect的run在执行中，reactive里set的triggerEffects判断后，不会触发effect.scheduler了
     updateProps(instance, prevProps, nextProps);
   };
 
@@ -406,7 +450,7 @@ export function createRenderer(renderOptions) {
     const { render } = instance;
     // 组件更新函数
     const componentUpdateFn = () => {
-      // 基于状态更新组件
+      // 基于状态(data, props, slot)更新组件
       // 第一次更新
       if (!instance.isMounted) {
         const subtree = render.call(instance.proxy, instance.proxy);
@@ -414,6 +458,13 @@ export function createRenderer(renderOptions) {
         instance.isMounted = true;
         instance.subtree = subtree;
       } else {
+        // 有next属性，说明属性or插槽也有更新
+        // 先更新组件实例里的属性or插槽
+        const { next } = instance;
+        if (next) {
+          updateComponentPreRender(instance, next);
+        }
+        // 改变data会直接修改instance里的data，但是如果改变外部传入的props、slot，instance里的自定义的props和attrs不会改变，所以render.call可以获取data改变后的vNode，但是不能获取外部传入的props、slot改变后的vNode，需要手动更新instance
         const subtree = render.call(instance.proxy, instance.proxy);
         patch(instance.subtree, subtree, container, anchor);
         instance.subtree = subtree;
@@ -421,9 +472,14 @@ export function createRenderer(renderOptions) {
     };
 
     // 使用effect保证state改变后，重新执行渲染(componentUpdateFn)
+    // 同时改变多个状态时（data、props、slot），会触发多次set-trigger-scheduler，
+    // 而且每次会走完effect再触发下一次set（effect._running不会起作用），所以要用queueJob进行延迟更新操作
     const effect = new ReactiveEffect( componentUpdateFn, () => { queueJob(update) } );
 
-    const update = ( instance.update = () => effect.run() )
+    // 把effect.run赋值给instance.update，为什么使用instance.update时不需要用queueJob包裹
+    // 因为instance.update是在patch-processComponent-updateComponent里触发，而且修改多个props，也只会调用一次instance.update
+    // 只要保证set-trigger-scheduler只触发一次componentUpdateFn-patch，就不需要使用queueJob
+    const update = ( instance.update = () => effect.run() );
 
     update();
   };

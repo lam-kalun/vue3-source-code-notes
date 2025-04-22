@@ -226,7 +226,7 @@ function postCleanEffect(effect2) {
 }
 var ReactiveEffect = class {
   // 收集当前effect内的属性（如name、age）所对应的dep
-  // 如果fn中依赖的数据发生变化，需求重新调用run
+  // 如果fn中依赖的数据发生变化，需要重新调用run
   constructor(fn, scheduler) {
     this.fn = fn;
     this.scheduler = scheduler;
@@ -296,6 +296,7 @@ function triggerEffects(dep) {
     if (effect2._dirtyLevel < 4 /* Dirty */) {
       effect2._dirtyLevel = 4 /* Dirty */;
     }
+    console.log(effect2._running);
     if (effect2._running === 0) {
       if (effect2.scheduler) {
         effect2.scheduler();
@@ -647,7 +648,9 @@ function createComponentInstance(vNode) {
     component: null,
     proxy: null,
     // 用来代理 data、props、attrs让用户使用更加方便
-    render: null
+    render: null,
+    next: null
+    // props、slot更新时，缓存的vNode
   };
   return instance;
 }
@@ -887,8 +890,8 @@ function createRenderer(renderOptions2) {
     if (n1 == null) {
       hostInsert(n2.el = hostCreateText(n2.children), container, anchor);
     } else {
+      const el = n2.el = n1.el;
       if (n1.children !== n2.children) {
-        const el = n2.el = n1.el;
         hostSetText(el, n2.children);
       }
     }
@@ -900,7 +903,13 @@ function createRenderer(renderOptions2) {
       patchChildren(n1, n2, container);
     }
   };
-  const hasPropsChange = (prevProps, nextProps) => {
+  const hasPropsChanged = (prevProps, nextProps) => {
+    if (!prevProps) {
+      return !!nextProps;
+    }
+    if (!nextProps) {
+      return true;
+    }
     const nKeys = Object.keys(nextProps);
     if (nKeys.length !== Object.keys(prevProps).length) {
       return true;
@@ -914,7 +923,7 @@ function createRenderer(renderOptions2) {
   };
   const updateProps = (instance, prevProps, nextProps) => {
     const { propsOptions } = instance;
-    if (hasPropsChange(prevProps, nextProps)) {
+    if (hasPropsChanged(prevProps, nextProps)) {
       for (let key in nextProps) {
         if (propsOptions[key]) {
           instance.props[key] = nextProps[key];
@@ -930,10 +939,31 @@ function createRenderer(renderOptions2) {
       }
     }
   };
+  const shouldComponentUpdate = (n1, n2) => {
+    const { props: prevProps, children: prevChildren } = n1;
+    const { props: nextProps, children: nextChildren } = n2;
+    if (prevChildren || nextChildren) return true;
+    if (prevProps === nextProps) return false;
+    if (!prevProps) {
+      return !!nextProps;
+    }
+    if (!nextProps) {
+      return true;
+    }
+    return hasPropsChanged(prevProps, nextProps);
+  };
   const updateComponent = (n1, n2) => {
     const instance = n2.component = n1.component;
-    const { props: prevProps } = n1;
-    const { props: nextProps } = n2;
+    if (shouldComponentUpdate(n1, n2)) {
+      instance.next = n2;
+      instance.update();
+    }
+  };
+  const updateComponentPreRender = (instance, next) => {
+    instance.next = null;
+    const { props: prevProps } = instance.vNode;
+    const { props: nextProps } = next;
+    instance.vNode = next;
     updateProps(instance, prevProps, nextProps);
   };
   const setupRenderEffect = (instance, container, anchor) => {
@@ -945,6 +975,10 @@ function createRenderer(renderOptions2) {
         instance.isMounted = true;
         instance.subtree = subtree;
       } else {
+        const { next } = instance;
+        if (next) {
+          updateComponentPreRender(instance, next);
+        }
         const subtree = render3.call(instance.proxy, instance.proxy);
         patch(instance.subtree, subtree, container, anchor);
         instance.subtree = subtree;

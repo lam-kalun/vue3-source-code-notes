@@ -49,7 +49,7 @@ export class ReactiveEffect {
 
   deps = []; // 收集当前effect内的属性（如name、age）所对应的dep
   
-  // 如果fn中依赖的数据发生变化，需求重新调用run
+  // 如果fn中依赖的数据发生变化，需要重新调用run
   constructor(public fn, public scheduler) {}
 
   public get dirty() {
@@ -132,6 +132,8 @@ export function triggerEffects(dep) {
     if (effect._dirtyLevel < DirtyLevels.Dirty) {
       effect._dirtyLevel = DirtyLevels.Dirty;
     }
+    console.log(effect._running);
+    
     if (effect._running === 0) {
       if (effect.scheduler) {
         effect.scheduler();

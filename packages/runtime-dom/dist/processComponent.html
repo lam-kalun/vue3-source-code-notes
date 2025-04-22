@@ -42,6 +42,22 @@
     // };
     // render(h(VueComponent), app);
 
+    // const VueComponent = {
+    //   data() {
+    //     return { name: 'zio', age: 1625 };
+    //   },
+    //   render(proxy) {
+    //     console.log('runner');
+        
+    //     return h(Fragment, [
+    //       h('button', { onClick: () => { this.age++; this.name = this.name + '1'; } }, 'hit me'),
+    //       h(Text, this.name),
+    //       h('span', this.age)
+    //     ]);
+    //   }
+    // };
+    // render(h(VueComponent), app);
+
 
     // 属性
     // attrs(非响应式的) props(响应式的)
@@ -70,27 +86,74 @@
 
     // data、props、slots更新后，组件也会更新
     // 通过属性更新组件
+    // const RenderComponent = {
+    //   props: {
+    //     address: String
+    //   },
+    //   render(proxy) {
+    //     return h(Text, this.address);
+    //   }
+    // };
+    // const VueComponent = {
+    //   data() {
+    //     return { flag: true, flag_2: true };
+    //   },
+    //   render(proxy) {
+    //     console.log('runner');
+        
+    //     return h(Fragment, [
+    //       h('button', { onClick: () => { this.flag = !this.flag; this.flag_2 = !this.flag_2; } }, 'hit me'),
+    //       // 实验不是用户定义的props，也被放入instance.props了
+    //       h(RenderComponent, { address: this.flag ? 'zio' : 'ded', a: this.flag ? 1 : 2})
+    //     ]);
+    //   }
+    // };
+    // render(h(VueComponent), app);
+
+    // const VueComponent = {
+    //   data() {
+    //     return { name: 'zio', age: 1625 };
+    //   },
+    //   render(proxy) {
+    //     console.log('runner');
+        
+    //     return h(Fragment, [
+    //       h('button', { onClick: () => { this.age++; this.name = this.name + '1'; } }, 'hit me'),
+    //       h(Text, this.name),
+    //       h('span', this.age)
+    //     ]);
+    //   }
+    // };
+    // render(h(VueComponent), app);
+    // setTimeout(() => {
+    //   render(h(VueComponent, {a: 1, b: 2}), app);
+    // }, 1000);
+
     const RenderComponent = {
       props: {
-        address: String
+        a: Number,
+        b: Number
       },
       render(proxy) {
-        return h(Text, this.address);
+        return h('div', this.a + this.b);
       }
     };
     const VueComponent = {
       data() {
-        return { flag: true };
+        return { fa: 1, fb: 2 };
       },
       render(proxy) {
+        console.log('runner');
+        
         return h(Fragment, [
-          h('button', { onClick: () => { this.flag = !this.flag } }, 'hit me'),
+          h('button', { onClick: () => { this.fa = 10; this.fb = 20; } }, 'hit me'),
           // 实验不是用户定义的props，也被放入instance.props了
-          h(RenderComponent, { address: this.flag ? 'zio' : 'ded', a: this.flag ? 1 : 2})
+          h(RenderComponent, { a: this.fa, b: this.fb})
         ]);
       }
     };
     render(h(VueComponent), app);
+    // 父componentUpdateFn -> patch -> patchChildren -> patchComponent -> updateComponent（n2复用n1.component） -> 改变子instance.next(初始挂载时会把instance赋值到vNode.component上) -> instance.update -> 子componentUpdateFn
   </script>
 </body>
 </html>

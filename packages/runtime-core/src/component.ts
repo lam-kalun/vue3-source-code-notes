@@ -15,6 +15,7 @@ export function createComponentInstance(vNode) {
     component: null,
     proxy: null, // 用来代理 data、props、attrs让用户使用更加方便
     render: null,
+    next: null, // props、slot更新时，缓存的vNode
   };
   return instance;
 };
