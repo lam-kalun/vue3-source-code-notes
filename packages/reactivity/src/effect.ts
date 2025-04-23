@@ -132,8 +132,6 @@ export function triggerEffects(dep) {
     if (effect._dirtyLevel < DirtyLevels.Dirty) {
       effect._dirtyLevel = DirtyLevels.Dirty;
     }
-    console.log(effect._running);
-    
     if (effect._running === 0) {
       if (effect.scheduler) {
         effect.scheduler();

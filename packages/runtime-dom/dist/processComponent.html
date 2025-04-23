@@ -13,7 +13,8 @@
       // h,
       // render,
       // Text,
-      // Fragment
+      // Fragment,
+      // ref
     } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.prod.js';
 
     // 自己的
@@ -21,7 +22,8 @@
       h,
       render,
       Text,
-      Fragment
+      Fragment,
+      ref
     } from './runtime-dom.js';
 
     // const VueComponent = {
@@ -129,31 +131,54 @@
     //   render(h(VueComponent, {a: 1, b: 2}), app);
     // }, 1000);
 
-    const RenderComponent = {
-      props: {
-        a: Number,
-        b: Number
-      },
-      render(proxy) {
-        return h('div', this.a + this.b);
-      }
-    };
-    const VueComponent = {
-      data() {
-        return { fa: 1, fb: 2 };
-      },
-      render(proxy) {
-        console.log('runner');
+    // const RenderComponent = {
+    //   props: {
+    //     a: Number,
+    //     b: Number
+    //   },
+    //   render(proxy) {
+    //     return h('div', this.a + this.b);
+    //   }
+    // };
+    // const VueComponent = {
+    //   data() {
+    //     return { fa: 1, fb: 2 };
+    //   },
+    //   render(proxy) {
+    //     console.log('runner');
         
-        return h(Fragment, [
-          h('button', { onClick: () => { this.fa = 10; this.fb = 20; } }, 'hit me'),
-          // 实验不是用户定义的props，也被放入instance.props了
-          h(RenderComponent, { a: this.fa, b: this.fb})
-        ]);
-      }
-    };
-    render(h(VueComponent), app);
+    //     return h(Fragment, [
+    //       h('button', { onClick: () => { this.fa = 10; this.fb = 20; } }, 'hit me'),
+    //       // 实验不是用户定义的props，也被放入instance.props了
+    //       h(RenderComponent, { a: this.fa, b: this.fb})
+    //     ]);
+    //   }
+    // };
+    // render(h(VueComponent), app);
     // 父componentUpdateFn -> patch -> patchChildren -> patchComponent -> updateComponent（n2复用n1.component） -> 改变子instance.next(初始挂载时会把instance赋值到vNode.component上) -> instance.update -> 子componentUpdateFn
+
+    const VueComponent = {
+      setup() {
+        const a = ref(1);
+        setTimeout(() => {
+          a.value = 2;
+        }, 1000);
+
+        return {
+          a
+        }
+        // return () => h('div', a.value);
+      },
+      // 相当于html模版
+      render(proxy) {
+        // return h('div', proxy.a);
+        return h(Fragment, [
+          h('button', {onClick: () => { proxy.a++ }}, '+++'),
+          h('div', proxy.a)
+        ])
+      }
+    }
+    render(h(VueComponent), app);
   </script>
 </body>
 </html>

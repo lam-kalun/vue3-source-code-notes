@@ -296,7 +296,6 @@ function triggerEffects(dep) {
     if (effect2._dirtyLevel < 4 /* Dirty */) {
       effect2._dirtyLevel = 4 /* Dirty */;
     }
-    console.log(effect2._running);
     if (effect2._running === 0) {
       if (effect2.scheduler) {
         effect2.scheduler();
@@ -649,8 +648,10 @@ function createComponentInstance(vNode) {
     proxy: null,
     // 用来代理 data、props、attrs让用户使用更加方便
     render: null,
-    next: null
+    next: null,
     // props、slot更新时，缓存的vNode
+    setupState: null
+    // setup返回的对象
   };
   return instance;
 }
@@ -660,11 +661,13 @@ var publicPrototype = {
 };
 var handler = {
   get(target, key) {
-    const { data, props } = target;
+    const { data, props, setupState } = target;
     if (data && hasOwn(data, key)) {
       return data[key];
     } else if (props && hasOwn(props, key)) {
       return props[key];
+    } else if (setupState && hasOwn(setupState, key)) {
+      return setupState[key];
     }
     const getter = publicPrototype[key];
     if (getter) {
@@ -672,12 +675,14 @@ var handler = {
     }
   },
   set(target, key, value) {
-    const { data, props } = target;
+    const { data, props, setupState } = target;
     if (data && hasOwn(data, key)) {
       data[key] = value;
     } else if (props && hasOwn(props, key)) {
       console.warn("props are readonly");
       return false;
+    } else if (setupState && hasOwn(setupState, key)) {
+      setupState[key] = value;
     }
     return true;
   }
@@ -703,14 +708,31 @@ function setupComponent(instance) {
   const { vNode } = instance;
   initProps(instance, vNode.props);
   instance.proxy = new Proxy(instance, handler);
-  let { data, render: render2 } = vNode.type;
-  if (!isFunction(data)) {
-    console.warn("data option must be a function");
-    data = () => {
+  let { data, render: render2, setup } = vNode.type;
+  if (setup) {
+    const setupContext = {
+      // emit,attrs,expose,slots
     };
+    const setupResult = setup(instance.props, setupContext);
+    if (isFunction(setupResult)) {
+      instance.render = setupResult;
+    } else if (isObject(setupResult)) {
+      instance.setupState = proxyRefs(setupResult);
+    } else {
+      console.warn("setup() should return an function or object.");
+    }
   }
-  instance.data = reactive(data.call(instance.proxy));
-  instance.render = render2;
+  if (data) {
+    if (!isFunction(data)) {
+      console.warn("data option must be a function.");
+      data = () => {
+      };
+    }
+    instance.data = reactive(data.call(instance.proxy));
+  }
+  if (!instance.render) {
+    instance.render = render2;
+  }
 }
 
 // packages/runtime-core/src/renderer.ts

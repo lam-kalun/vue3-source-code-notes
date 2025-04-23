@@ -1,8 +1,9 @@
-import { reactive } from "@vue/reactivity";
-import { hasOwn, isFunction } from "@vue/shared";
+import { proxyRefs, reactive } from "@vue/reactivity";
+import { hasOwn, isFunction, isObject } from "@vue/shared";
 
 export function createComponentInstance(vNode) {
   const { props: propsOptions = {} } = vNode.type;
+  // 组件实例
   const instance = {
     data: null, // 状态(组件里的响应式data)
     vNode, // 组件的虚拟节点
@@ -16,6 +17,7 @@ export function createComponentInstance(vNode) {
     proxy: null, // 用来代理 data、props、attrs让用户使用更加方便
     render: null,
     next: null, // props、slot更新时，缓存的vNode
+    setupState: null, // setup返回的对象
   };
   return instance;
 };
@@ -27,11 +29,13 @@ const publicPrototype = {
 
 const handler = {
   get(target, key) {
-    const { data, props } = target;
+    const { data, props, setupState } = target;
     if (data && hasOwn(data, key)) {
       return data[key];
     } else if (props && hasOwn(props, key)) {
       return props[key];
+    } else if (setupState && hasOwn(setupState, key)) {
+      return setupState[key];
     }
     // 一些无法修改的属性，$slots、$attrs
     const getter = publicPrototype[key];
@@ -40,13 +44,15 @@ const handler = {
     }
   },
   set(target, key, value) {
-    const { data, props } = target;
+    const { data, props, setupState } = target;
     if (data && hasOwn(data, key)) {
       data[key] = value;
     } else if (props && hasOwn(props, key)) {
       // 可以修改props中的嵌套属性（内部不报错），但是不合法
       console.warn("props are readonly");
       return false;
+    } else if (setupState && hasOwn(setupState, key)) {
+      setupState[key] = value;
     }
     return true;
   }
@@ -83,12 +89,30 @@ export function setupComponent(instance) {
   initProps(instance, vNode.props);
   // 赋值代理对象
   instance.proxy = new Proxy(instance, handler);
-  let { data, render } = vNode.type;
-  if (!isFunction(data)) {
-    console.warn("data option must be a function");
-    data = () => {}
+  let { data, render, setup } = vNode.type;
+  if (setup) {
+    const setupContext = {
+      // emit,attrs,expose,slots
+    };
+    // todo shallowReadonly(instance.props) setup里面不可以更改props
+    const setupResult = setup(instance.props, setupContext);
+    if (isFunction(setupResult)) {
+      instance.render = setupResult;
+    } else if (isObject(setupResult)) {
+      instance.setupState = proxyRefs(setupResult);
+    } else {
+      console.warn('setup() should return an function or object.');
+    }
   }
-  // data中可以拿到props
-  instance.data = reactive(data.call(instance.proxy));
-  instance.render = render;
+  if (data) {
+    if (!isFunction(data)) {
+      console.warn("data option must be a function.");
+      data = () => {};
+    }
+    // data中可以拿到props
+    instance.data = reactive(data.call(instance.proxy));
+  }
+  if (!instance.render) {
+    instance.render = render;
+  }
 };
