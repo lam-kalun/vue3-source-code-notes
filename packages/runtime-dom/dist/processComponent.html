@@ -44,6 +44,7 @@
     // };
     // render(h(VueComponent), app);
 
+
     // const VueComponent = {
     //   data() {
     //     return { name: 'zio', age: 1625 };
@@ -74,7 +75,6 @@
     //   },
     //   render(proxy) {
     //     console.log(proxy);
-        
     //     // data、props直接proxy.获取，attrs要proxy.$attrs.获取
     //     // data可以修改（也不推荐在render里修改），props不能修改
     //     return h('div', [
@@ -112,13 +112,13 @@
     // };
     // render(h(VueComponent), app);
 
+
     // const VueComponent = {
     //   data() {
     //     return { name: 'zio', age: 1625 };
     //   },
     //   render(proxy) {
     //     console.log('runner');
-        
     //     return h(Fragment, [
     //       h('button', { onClick: () => { this.age++; this.name = this.name + '1'; } }, 'hit me'),
     //       h(Text, this.name),
@@ -130,6 +130,7 @@
     // setTimeout(() => {
     //   render(h(VueComponent, {a: 1, b: 2}), app);
     // }, 1000);
+
 
     // const RenderComponent = {
     //   props: {
@@ -146,7 +147,6 @@
     //   },
     //   render(proxy) {
     //     console.log('runner');
-        
     //     return h(Fragment, [
     //       h('button', { onClick: () => { this.fa = 10; this.fb = 20; } }, 'hit me'),
     //       // 实验不是用户定义的props，也被放入instance.props了
@@ -157,27 +157,65 @@
     // render(h(VueComponent), app);
     // 父componentUpdateFn -> patch -> patchChildren -> patchComponent -> updateComponent（n2复用n1.component） -> 改变子instance.next(初始挂载时会把instance赋值到vNode.component上) -> instance.update -> 子componentUpdateFn
 
+
+    // const VueComponent = {
+    //   setup() {
+    //     const a = ref(1);
+    //     setTimeout(() => {
+    //       a.value = 2;
+    //     }, 1000);
+
+    //     // return {
+    //     //   a
+    //     // }
+    //     // return () => h('div', a.value);
+    //     return () => h(Fragment, [
+    //       h('button', {onClick: () => { a.value++ }}, '+++'),
+    //       h('div', a.value)
+    //     ]);
+    //   },
+    //   // 相当于html模版
+    //   render(proxy) {
+    //     // return h('div', proxy.a);
+    //     return h(Fragment, [
+    //       h('button', {onClick: () => { proxy.a++ }}, '+++'),
+    //       h('div', proxy.a)
+    //     ])
+    //   };
+    // };
+    // render(h(VueComponent), app);
+
+
+    const RenderComponent = {
+      setup(props, {slots}) {
+        return () => h(Fragment, [
+          slots.footer('anyFooter'),
+          slots.header('anyHeader')
+          // slots.default()
+        ]);
+      }
+      // render(proxy) {
+      //   return h(Fragment, [
+      //     proxy.$slots.footer('anyFooter'),
+      //     proxy.$slots.header('anyHeader')
+      //     // proxy.$slots.default()
+      //   ]);
+      // }
+    };
     const VueComponent = {
       setup() {
-        const a = ref(1);
-        setTimeout(() => {
-          a.value = 2;
-        }, 1000);
-
-        return {
-          a
-        }
-        // return () => h('div', a.value);
-      },
-      // 相当于html模版
-      render(proxy) {
-        // return h('div', proxy.a);
-        return h(Fragment, [
-          h('button', {onClick: () => { proxy.a++ }}, '+++'),
-          h('div', proxy.a)
-        ])
+        return () => h(Fragment, [
+          h(Text, 'bala'),
+          h(RenderComponent, null, {
+            // todo 兼容函数、字符串、数组、vNode类型
+            header: (t) => h('header', 'header ' + t),
+            footer: (t) => h('footer', 'footer ' + t)
+          }),
+          // todo 兼容函数、字符串、数组类型
+          // h(RenderComponent, null, h(Text, '123'))
+        ]);
       }
-    }
+    };
     render(h(VueComponent), app);
   </script>
 </body>

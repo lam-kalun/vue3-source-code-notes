@@ -24,6 +24,8 @@ export function createVNode(type, props, children?) {
     // children是虚拟节点，也会被嵌套在数组内
     if (Array.isArray(children)) {
       vNode.shapeFlag |= ShapeFlags.ARRAY_CHILDREN;
+    } else if (isObject(children)) {
+      vNode.shapeFlag |= ShapeFlags.SLOTS_CHILDREN;
     } else {
       vNode.shapeFlag |= ShapeFlags.TEXT_CHILDREN;
       vNode.children = String(children);

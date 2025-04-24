@@ -140,6 +140,8 @@ function createVNode(type, props, children) {
   if (children) {
     if (Array.isArray(children)) {
       vNode.shapeFlag |= 16 /* ARRAY_CHILDREN */;
+    } else if (isObject(children)) {
+      vNode.shapeFlag |= 32 /* SLOTS_CHILDREN */;
     } else {
       vNode.shapeFlag |= 8 /* TEXT_CHILDREN */;
       vNode.children = String(children);
@@ -642,6 +644,7 @@ function createComponentInstance(vNode) {
     // 组件更新的函数
     props: {},
     attrs: {},
+    slots: {},
     propsOptions,
     // 用户定义的props
     component: null,
@@ -656,7 +659,8 @@ function createComponentInstance(vNode) {
   return instance;
 }
 var publicPrototype = {
-  $attrs: (instance) => instance.attrs
+  $attrs: (instance) => instance.attrs,
+  $slots: (instance) => instance.slots
   // ...
 };
 var handler = {
@@ -704,14 +708,32 @@ var initProps = (instance, rawProps) => {
     instance.attrs = attrs;
   }
 };
+var initSlots = (instance, children) => {
+  const { slots } = instance;
+  if (instance.vNode.shapeFlag & 32 /* SLOTS_CHILDREN */) {
+    for (const key in children) {
+      slots[key] = children[key];
+    }
+  } else if (children) {
+    if (Array.isArray(children)) {
+      slots.default = () => createVNode(
+        Fragment,
+        null,
+        children.slice()
+      );
+    }
+  }
+};
 function setupComponent(instance) {
   const { vNode } = instance;
   initProps(instance, vNode.props);
+  initSlots(instance, vNode.children);
   instance.proxy = new Proxy(instance, handler);
   let { data, render: render2, setup } = vNode.type;
   if (setup) {
     const setupContext = {
       // emit,attrs,expose,slots
+      slots: instance.slots
     };
     const setupResult = setup(instance.props, setupContext);
     if (isFunction(setupResult)) {
