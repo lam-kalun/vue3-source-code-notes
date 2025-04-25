@@ -20,10 +20,18 @@ export function createRenderer(renderOptions) {
   } = renderOptions;
  
   const unmount = (vNode) => {
+    const { shapeFlag } = vNode;
     // Fragment类型的vNode没有el，要一个个把它的children删除
     if (vNode.type === Fragment) {
       unmountChildren(vNode.children);
-    } else {
+    }
+    // 组件类型的vNode没有el，实际渲染的vNode，是在vNode.component(实例instance).subtree，
+    // el在vNode.component(实例instance).subtree里
+    else if (shapeFlag & ShapeFlags.COMPONENT) {
+      // subtree有可能还是Fragment、COMPONENT等其他类型
+      unmount(vNode.component.subtree);
+    }
+    else {
       hostRemove(vNode.el);
     }
   };

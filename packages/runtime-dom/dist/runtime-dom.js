@@ -781,8 +781,11 @@ function createRenderer(renderOptions2) {
     patchProp: hostPatchProp
   } = renderOptions2;
   const unmount = (vNode) => {
+    const { shapeFlag } = vNode;
     if (vNode.type === Fragment) {
       unmountChildren(vNode.children);
+    } else if (shapeFlag & 6 /* COMPONENT */) {
+      unmount(vNode.component.subtree);
     } else {
       hostRemove(vNode.el);
     }
