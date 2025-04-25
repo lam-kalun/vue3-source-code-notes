@@ -8,12 +8,13 @@ export function createComponentInstance(vNode) {
   const instance = {
     data: null, // 状态(组件里的响应式data)
     vNode, // 组件的虚拟节点
-    subtree: null, // 子树
+    subtree: null, // 子树(组件里render返回的vNode)
     isMounted: false, // 是否挂载完成
     update: null, // 组件更新的函数
     props: {},
     attrs: {},
     slots: {},
+    exposed: null,
     propsOptions, // 用户定义的props
     component: null,
     proxy: null, // 用来代理 data、props、attrs让用户使用更加方便
@@ -120,7 +121,16 @@ export function setupComponent(instance) {
   if (setup) {
     const setupContext = {
       // emit,attrs,expose,slots
-      slots: instance.slots
+      attrs: instance.attrs,
+      slots: instance.slots,
+      emit(event, ...payload) {
+        const eventName = `on${event[0].toUpperCase() + event.slice(1)}`;
+        const handler = instance.vNode.props[eventName];
+        handler && handler(...payload);
+      },
+      expose(value) {
+        instance.exposed = value;
+      }
     };
     // todo shallowReadonly(instance.props) setup里面不可以更改props
     const setupResult = setup(instance.props, setupContext);

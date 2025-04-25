@@ -186,37 +186,50 @@
     // render(h(VueComponent), app);
 
 
-    const RenderComponent = {
-      setup(props, {slots}) {
-        return () => h(Fragment, [
-          slots.footer('anyFooter'),
-          slots.header('anyHeader')
-          // slots.default()
-        ]);
-      }
-      // render(proxy) {
-      //   return h(Fragment, [
-      //     proxy.$slots.footer('anyFooter'),
-      //     proxy.$slots.header('anyHeader')
-      //     // proxy.$slots.default()
-      //   ]);
-      // }
-    };
+    // const RenderComponent = {
+    //   setup(props, {slots}) {
+    //     return () => h(Fragment, [
+    //       slots.footer('anyFooter'),
+    //       slots.header('anyHeader')
+    //       // slots.default()
+    //     ]);
+    //   }
+    //   // render(proxy) {
+    //   //   return h(Fragment, [
+    //   //     proxy.$slots.footer('anyFooter'),
+    //   //     proxy.$slots.header('anyHeader')
+    //   //     // proxy.$slots.default()
+    //   //   ]);
+    //   // }
+    // };
+    // const VueComponent = {
+    //   setup() {
+    //     return () => h(Fragment, [
+    //       h(Text, 'bala'),
+    //       h(RenderComponent, null, {
+    //         // todo 兼容函数、字符串、数组、vNode类型
+    //         header: (t) => h('header', 'header ' + t),
+    //         footer: (t) => h('footer', 'footer ' + t)
+    //       }),
+    //       // todo 兼容函数、字符串、数组类型
+    //       // h(RenderComponent, null, h(Text, '123'))
+    //     ]);
+    //   }
+    // };
+    // render(h(VueComponent), app);
+
+
     const VueComponent = {
-      setup() {
-        return () => h(Fragment, [
-          h(Text, 'bala'),
-          h(RenderComponent, null, {
-            // todo 兼容函数、字符串、数组、vNode类型
-            header: (t) => h('header', 'header ' + t),
-            footer: (t) => h('footer', 'footer ' + t)
-          }),
-          // todo 兼容函数、字符串、数组类型
-          // h(RenderComponent, null, h(Text, '123'))
-        ]);
+      setup(props, {emit, expose}) {
+        expose({a: 1});
+        return () => h(
+          'button',
+          { onClick: () => { emit('myEvent', 3) } },
+          '不要点我'
+        )
       }
     };
-    render(h(VueComponent), app);
+    render(h(VueComponent, { onMyEvent: (value) => {alert(value)} }), app);
   </script>
 </body>
 </html>

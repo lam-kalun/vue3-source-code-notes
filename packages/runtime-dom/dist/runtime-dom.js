@@ -637,7 +637,7 @@ function createComponentInstance(vNode) {
     vNode,
     // 组件的虚拟节点
     subtree: null,
-    // 子树
+    // 子树(组件里render返回的vNode)
     isMounted: false,
     // 是否挂载完成
     update: null,
@@ -645,6 +645,7 @@ function createComponentInstance(vNode) {
     props: {},
     attrs: {},
     slots: {},
+    exposed: null,
     propsOptions,
     // 用户定义的props
     component: null,
@@ -733,7 +734,16 @@ function setupComponent(instance) {
   if (setup) {
     const setupContext = {
       // emit,attrs,expose,slots
-      slots: instance.slots
+      attrs: instance.attrs,
+      slots: instance.slots,
+      emit(event, ...payload) {
+        const eventName = `on${event[0].toUpperCase() + event.slice(1)}`;
+        const handler2 = instance.vNode.props[eventName];
+        handler2 && handler2(...payload);
+      },
+      expose(value) {
+        instance.exposed = value;
+      }
     };
     const setupResult = setup(instance.props, setupContext);
     if (isFunction(setupResult)) {
