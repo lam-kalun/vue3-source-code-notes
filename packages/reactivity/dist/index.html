@@ -10,15 +10,15 @@
 
   <script type="module">
     // 原生的
-    // import {
-    //   reactive,
-    //   effect,
-    //   ref,
-    //   toRef
-    // } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js';
+    import {
+      reactive,
+      effect,
+      ref,
+      toRef
+    } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js';
 
     // 自己的
-    import { reactive, effect, ref, toRef, toRefs, proxyRefs } from './reactivity.js';
+    // import { reactive, effect, ref, toRef, toRefs, proxyRefs } from './reactivity.js';
     // effect例子笔记
     // import './effectNotes.js';
 
@@ -29,7 +29,13 @@
     // import './computedNotes.js';
 
     // watch例子笔记
-    import './watchNotes.js'
+    // import './watchNotes.js'
+
+
+    // todo reactive会在get里把ref解包
+    const state = reactive({a: 1, b: ref(1)});
+    console.log(state.a, state.b);// 1 1
+    
   </script>
 </body>
 </html>

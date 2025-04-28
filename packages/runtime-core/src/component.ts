@@ -25,12 +25,18 @@ export function createComponentInstance(vNode) {
   return instance;
 };
 
+export let currentInstance = null;
+export const getCurrentInstance = () => currentInstance;
+export const setCurrentInstance = (v) => {currentInstance = v};
+export const unsetCurrentInstance = () => {currentInstance = null};
+
 const publicPrototype = {
   $attrs: instance => instance.attrs,
   $slots: instance => instance.slots,
   // ...
 };
 
+// instance.proxy的handler
 const handler = {
   get(target, key) {
     const { data, props, setupState } = target;
@@ -132,8 +138,10 @@ export function setupComponent(instance) {
         instance.exposed = value;
       }
     };
+    setCurrentInstance(instance);
     // todo shallowReadonly(instance.props) setup里面不可以更改props
     const setupResult = setup(instance.props, setupContext);
+    unsetCurrentInstance();
     if (isFunction(setupResult)) {
       instance.render = setupResult;
     } else if (isObject(setupResult)) {
@@ -147,7 +155,7 @@ export function setupComponent(instance) {
       console.warn("data option must be a function.");
       data = () => {};
     }
-    // data中可以拿到props
+    // data中可以拿到props、setupState，不能拿data
     instance.data = reactive(data.call(instance.proxy));
   }
   if (!instance.render) {

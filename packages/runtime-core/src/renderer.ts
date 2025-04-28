@@ -4,6 +4,7 @@ import getSequence from "./seq";
 import { ReactiveEffect } from '@vue/reactivity';
 import { queueJob } from "./scheduler";
 import { createComponentInstance, setupComponent } from "./component";
+import { invokeArray } from "./apiLifecycle";
 
 export function createRenderer(renderOptions) {
   // 重命名
@@ -458,17 +459,28 @@ export function createRenderer(renderOptions) {
     const { render } = instance;
     // 组件更新函数
     const componentUpdateFn = () => {
+      debugger
       // 基于状态(data, props, slot)更新组件
       // 第一次更新
       if (!instance.isMounted) {
+        const { bm, m } = instance;
+        if (bm) {
+          invokeArray(bm);
+        }
         const subtree = render.call(instance.proxy, instance.proxy);
         patch(null, subtree, container, anchor);
         instance.isMounted = true;
         instance.subtree = subtree;
+        if (m) {
+          invokeArray(m);
+        }
       } else {
         // 有next属性，说明属性or插槽也有更新
         // 先更新组件实例里的属性or插槽
-        const { next } = instance;
+        const { next, bu, u } = instance;
+        if (bu) {
+          invokeArray(bu);
+        }
         if (next) {
           updateComponentPreRender(instance, next);
         }
@@ -476,6 +488,9 @@ export function createRenderer(renderOptions) {
         const subtree = render.call(instance.proxy, instance.proxy);
         patch(instance.subtree, subtree, container, anchor);
         instance.subtree = subtree;
+        if (u) {
+          invokeArray(u);
+        }
       }
     };
 

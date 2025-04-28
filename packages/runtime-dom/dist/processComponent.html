@@ -14,7 +14,12 @@
       // render,
       // Text,
       // Fragment,
-      // ref
+      // ref,
+      // onBeforeMount,
+      // onMounted,
+      // onBeforeUpdate,
+      // onUpdated,
+      // getCurrentInstance
     } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.prod.js';
 
     // 自己的
@@ -23,7 +28,12 @@
       render,
       Text,
       Fragment,
-      ref
+      ref,
+      onBeforeMount,
+      onMounted,
+      onBeforeUpdate,
+      onUpdated,
+      getCurrentInstance
     } from './runtime-dom.js';
 
     // const VueComponent = {
@@ -164,7 +174,6 @@
     //     setTimeout(() => {
     //       a.value = 2;
     //     }, 1000);
-
     //     // return {
     //     //   a
     //     // }
@@ -186,6 +195,7 @@
     // render(h(VueComponent), app);
 
 
+    // 插槽
     // const RenderComponent = {
     //   setup(props, {slots}) {
     //     return () => h(Fragment, [
@@ -219,20 +229,119 @@
     // render(h(VueComponent), app);
 
 
-    const VueComponent = {
-      setup(props, {emit, expose}) {
-        expose({a: 1});
-        return () => h(
-          'button',
-          { onClick: () => { emit('myEvent', 3) } },
-          '不要点我'
-        )
+    // const VueComponent = {
+    //   setup(props, {emit, expose}) {
+    //     expose({a: 1});
+    //     return () => h(
+    //       'button',
+    //       { onClick: () => { emit('myEvent', 3) } },
+    //       '不要点我'
+    //     )
+    //   }
+    // };
+    // render(h(VueComponent, { onMyEvent: (value) => {alert(value)} }), app);
+    // setTimeout(() => {
+    //   render(null, app);
+    // }, 1000);
+
+
+    // 一些数据使用方式问题
+    // const childComponent = {
+    //   props: {
+    //     change: Number
+    //   },
+    //   // data在setup内，需要使用getCurrentInstance获取instance实例（instance.data）
+    //   // 而且data因为被reactive包裹，reactive内部会把ref解包，所以instance.data.d直接获取1，不用.value
+    //   data(proxy) {
+    //     return {
+    //       d: ref(1)
+    //     };
+    //   },
+    //   setup(props) {
+    //     // props在setup内也不用.value
+    //     // return () => h('div', props.change);
+    //   },
+    //   render(proxy) {
+    //     return h('div', proxy.change);
+    //   }
+    // };
+    // const parentComponent = {
+    //   setup() {
+    //     const change = ref(909);
+    //     setTimeout(() => {
+    //       change.value = 808;
+    //     }, 1000);
+    //     // 在setup里使用ref要带value，在setup外的render(相当于模版)，就不用带value，
+    //     // 因为ref在setup return出去时，会被proxyRefs包裹后，存储到instance.setupState上，
+    //     // setup外的render get ref value时，相当于访问instance.setupState
+    //     return () => h(childComponent, {change: change.value});
+    //     // return {
+    //     //   change
+    //     // };
+    //   },
+    //   // render(proxy) {
+    //   //   return h(childComponent, {change: proxy.change});
+    //   // }
+    // };
+    // render(h(parentComponent), app);
+
+
+    // 生命周期
+    const childComponent = {
+      props: {
+        change: Number
+      },
+      setup(props) {
+        const a = getCurrentInstance();
+        onBeforeMount(() => {
+          console.log('onBeforeMount', 'child');
+          console.log(getCurrentInstance(), 'child instance');
+        });
+        onMounted(() => {
+          console.log('onMounted', 'child');
+        });
+        onBeforeUpdate(() => {
+          console.log('onBeforeUpdate', 'child');
+        });
+        onUpdated(() => {
+          console.log('onUpdated', 'child');
+        });
+        const b = getCurrentInstance();
+      },
+      render(proxy) {
+        return h('div', proxy.d);
       }
     };
-    render(h(VueComponent, { onMyEvent: (value) => {alert(value)} }), app);
-    setTimeout(() => {
-      render(null, app);
-    }, 1000);
+    const parentComponent = {
+      setup() {
+        const a = getCurrentInstance();
+        const change = ref(909);
+        onBeforeMount(() => {
+          console.log('onBeforeMount', 'parent');
+          console.log(getCurrentInstance(), 'parent instance');
+        });
+        onMounted(() => {
+          console.log('onMounted', 'parent');
+        });
+        onBeforeUpdate(() => {
+          console.log('onBeforeUpdate', 'parent');
+        });
+        onUpdated(() => {
+          console.log('onUpdated', 'parent');
+        });
+        const b = getCurrentInstance();
+        setTimeout(() => {
+          change.value = 808;
+        }, 1000);
+        return {
+          change
+        };
+      },
+      render(proxy) {
+        return h(childComponent, {change: proxy.change});
+      }
+    };
+    render(h(parentComponent), app);
   </script>
 </body>
 </html>

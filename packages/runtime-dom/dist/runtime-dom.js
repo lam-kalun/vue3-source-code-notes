@@ -659,6 +659,14 @@ function createComponentInstance(vNode) {
   };
   return instance;
 }
+var currentInstance = null;
+var getCurrentInstance = () => currentInstance;
+var setCurrentInstance = (v) => {
+  currentInstance = v;
+};
+var unsetCurrentInstance = () => {
+  currentInstance = null;
+};
 var publicPrototype = {
   $attrs: (instance) => instance.attrs,
   $slots: (instance) => instance.slots
@@ -745,7 +753,9 @@ function setupComponent(instance) {
         instance.exposed = value;
       }
     };
+    setCurrentInstance(instance);
     const setupResult = setup(instance.props, setupContext);
+    unsetCurrentInstance();
     if (isFunction(setupResult)) {
       instance.render = setupResult;
     } else if (isObject(setupResult)) {
@@ -766,6 +776,30 @@ function setupComponent(instance) {
     instance.render = render2;
   }
 }
+
+// packages/runtime-core/src/apiLifecycle.ts
+var createHook = (type) => {
+  return (hook, target = currentInstance) => {
+    if (target) {
+      const hooks = target[type] || (target[type] = []);
+      const wrapHook = () => {
+        setCurrentInstance(target);
+        hook.call(target);
+        unsetCurrentInstance();
+      };
+      hooks.push(wrapHook);
+    }
+  };
+};
+var onBeforeMount = createHook("bm" /* BEFORE_MOUNT */);
+var onMounted = createHook("m" /* MOUNTED */);
+var onBeforeUpdate = createHook("bu" /* BEFORE_UPDATE */);
+var onUpdated = createHook("u" /* UPDATE */);
+var invokeArray = (fns) => {
+  for (let i = 0; i < fns.length; i++) {
+    fns[i]();
+  }
+};
 
 // packages/runtime-core/src/renderer.ts
 function createRenderer(renderOptions2) {
@@ -1026,19 +1060,33 @@ function createRenderer(renderOptions2) {
   const setupRenderEffect = (instance, container, anchor) => {
     const { render: render3 } = instance;
     const componentUpdateFn = () => {
+      debugger;
       if (!instance.isMounted) {
+        const { bm, m } = instance;
+        if (bm) {
+          invokeArray(bm);
+        }
         const subtree = render3.call(instance.proxy, instance.proxy);
         patch(null, subtree, container, anchor);
         instance.isMounted = true;
         instance.subtree = subtree;
+        if (m) {
+          invokeArray(m);
+        }
       } else {
-        const { next } = instance;
+        const { next, bu, u } = instance;
+        if (bu) {
+          invokeArray(bu);
+        }
         if (next) {
           updateComponentPreRender(instance, next);
         }
         const subtree = render3.call(instance.proxy, instance.proxy);
         patch(instance.subtree, subtree, container, anchor);
         instance.subtree = subtree;
+        if (u) {
+          invokeArray(u);
+        }
       }
     };
     const effect2 = new ReactiveEffect(componentUpdateFn, () => {
@@ -1133,19 +1181,29 @@ export {
   Text,
   activeEffect,
   computed,
+  createComponentInstance,
   createRenderer,
   createVNode,
+  currentInstance,
   effect,
+  getCurrentInstance,
   h,
+  invokeArray,
   isReactive,
   isRef,
   isSameVNodeType,
   isVNode,
+  onBeforeMount,
+  onBeforeUpdate,
+  onMounted,
+  onUpdated,
   proxyRefs,
   reactive,
   ref,
   render,
   renderOptions,
+  setCurrentInstance,
+  setupComponent,
   toReactive,
   toRef,
   toRefs,
@@ -1153,6 +1211,7 @@ export {
   trackEffect,
   trigger2 as trigger,
   triggerEffects,
+  unsetCurrentInstance,
   watch,
   watchEffect
 };
