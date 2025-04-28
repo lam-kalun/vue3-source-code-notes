@@ -15,7 +15,8 @@ export function createVNode(type, props, children?) {
     children,
     shapeFlag,
     el: null,
-    key: props?.key
+    key: props?.key || null,
+    ref: props?.ref || null,
   };
 
   // 如果有children，再通过或运算计算一下shapeFlag, 以便在渲染时，判断出是数组还是字符串文本

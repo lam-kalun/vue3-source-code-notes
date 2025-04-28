@@ -287,58 +287,86 @@
 
 
     // 生命周期
+    // const childComponent = {
+    //   props: {
+    //     change: Number
+    //   },
+    //   setup(props) {
+    //     const a = getCurrentInstance();
+    //     console.log('setup', 'child');
+    //     onBeforeMount(() => {
+    //       console.log('onBeforeMount', 'child');
+    //       console.log(getCurrentInstance(), 'child instance');
+    //     });
+    //     onMounted(() => {
+    //       console.log('onMounted', 'child');
+    //     });
+    //     onBeforeUpdate(() => {
+    //       console.log('onBeforeUpdate', 'child');
+    //     });
+    //     onUpdated(() => {
+    //       console.log('onUpdated', 'child');
+    //     });
+    //     const b = getCurrentInstance();
+    //     return {};
+    //   },
+    //   render(proxy) {
+    //     return h('div', proxy.change);
+    //   }
+    // };
+    // const parentComponent = {
+    //   setup() {
+    //     console.log('setup', 'parent');
+    //     const a = getCurrentInstance();
+    //     const change = ref(909);
+    //     onBeforeMount(() => {
+    //       console.log('onBeforeMount', 'parent');
+    //       console.log(getCurrentInstance(), 'parent instance');
+    //     });
+    //     onMounted(() => {
+    //       console.log('onMounted', 'parent');
+    //     });
+    //     onBeforeUpdate(() => {
+    //       console.log('onBeforeUpdate', 'parent');
+    //     });
+    //     onUpdated(() => {
+    //       console.log('onUpdated', 'parent');
+    //     });
+    //     const b = getCurrentInstance();
+    //     setTimeout(() => {
+    //       change.value = 808;
+    //     }, 1000);
+    //     return {
+    //       change
+    //     };
+    //   },
+    //   render(proxy) {
+    //     return h(childComponent, {change: proxy.change});
+    //   }
+    // };
+    // render(h(parentComponent), app);
+
+
+    // 组件ref
     const childComponent = {
       props: {
-        change: Number
+        a: Number
       },
-      setup(props) {
-        const a = getCurrentInstance();
-        onBeforeMount(() => {
-          console.log('onBeforeMount', 'child');
-          console.log(getCurrentInstance(), 'child instance');
-        });
-        onMounted(() => {
-          console.log('onMounted', 'child');
-        });
-        onBeforeUpdate(() => {
-          console.log('onBeforeUpdate', 'child');
-        });
-        onUpdated(() => {
-          console.log('onUpdated', 'child');
-        });
-        const b = getCurrentInstance();
-      },
-      render(proxy) {
-        return h('div', proxy.d);
+      setup(props, {expose}) {
+        // expose({
+        //   a: 800
+        // });
+        return () => h('div', props.a);
       }
     };
     const parentComponent = {
       setup() {
-        const a = getCurrentInstance();
-        const change = ref(909);
-        onBeforeMount(() => {
-          console.log('onBeforeMount', 'parent');
-          console.log(getCurrentInstance(), 'parent instance');
-        });
+        const comp = ref(null);
         onMounted(() => {
-          console.log('onMounted', 'parent');
+          console.log(comp.value);
         });
-        onBeforeUpdate(() => {
-          console.log('onBeforeUpdate', 'parent');
-        });
-        onUpdated(() => {
-          console.log('onUpdated', 'parent');
-        });
-        const b = getCurrentInstance();
-        setTimeout(() => {
-          change.value = 808;
-        }, 1000);
-        return {
-          change
-        };
-      },
-      render(proxy) {
-        return h(childComponent, {change: proxy.change});
+        return () => h(childComponent, {ref: comp, a: 200});
+        // return () => h('div', {ref: comp, a: 200});
       }
     };
     render(h(parentComponent), app);

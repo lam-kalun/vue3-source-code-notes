@@ -1,7 +1,7 @@
 import { hasOwn, ShapeFlags } from "@vue/shared";
 import { Fragment, isSameVNodeType, Text } from "./vnode";
 import getSequence from "./seq";
-import { ReactiveEffect } from '@vue/reactivity';
+import { isRef, ReactiveEffect } from '@vue/reactivity';
 import { queueJob } from "./scheduler";
 import { createComponentInstance, setupComponent } from "./component";
 import { invokeArray } from "./apiLifecycle";
@@ -459,7 +459,6 @@ export function createRenderer(renderOptions) {
     const { render } = instance;
     // 组件更新函数
     const componentUpdateFn = () => {
-      debugger
       // 基于状态(data, props, slot)更新组件
       // 第一次更新
       if (!instance.isMounted) {
@@ -531,6 +530,15 @@ export function createRenderer(renderOptions) {
       updateComponent(n1, n2);
     }
   };
+
+  const setRef = (rawRef, vNode) => {
+    // 如果ref放到组件上，指代的是组件实例；如果组件上有用expose方法设置exposed，指代的是exposed；
+    // 如果ref放到dom元素上，指代的是dom元素
+    const value = vNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT ? vNode.component.exposed || vNode.component.proxy : vNode.el;
+    if (isRef(rawRef)) {
+      rawRef.value = value;
+    }
+  };
  
   /*
     n1：旧vNode值
@@ -551,7 +559,7 @@ export function createRenderer(renderOptions) {
     }
 
     // 根据n2.type，处理不同的节点
-    const { type, shapeFlag } = n2;
+    const { type, shapeFlag, ref } = n2;
     switch(type) {
       case Text:
         // 文本
@@ -573,6 +581,9 @@ export function createRenderer(renderOptions) {
         break;
     }
     
+    if (ref != null) {
+      setRef(ref, n2);
+    }
   };
 
   /*

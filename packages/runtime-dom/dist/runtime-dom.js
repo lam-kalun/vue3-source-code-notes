@@ -135,7 +135,8 @@ function createVNode(type, props, children) {
     children,
     shapeFlag,
     el: null,
-    key: props?.key
+    key: props?.key || null,
+    ref: props?.ref || null
   };
   if (children) {
     if (Array.isArray(children)) {
@@ -1060,7 +1061,6 @@ function createRenderer(renderOptions2) {
   const setupRenderEffect = (instance, container, anchor) => {
     const { render: render3 } = instance;
     const componentUpdateFn = () => {
-      debugger;
       if (!instance.isMounted) {
         const { bm, m } = instance;
         if (bm) {
@@ -1107,6 +1107,12 @@ function createRenderer(renderOptions2) {
       updateComponent(n1, n2);
     }
   };
+  const setRef = (rawRef, vNode) => {
+    const value = vNode.shapeFlag & 4 /* STATEFUL_COMPONENT */ ? vNode.component.exposed || vNode.component.proxy : vNode.el;
+    if (isRef(rawRef)) {
+      rawRef.value = value;
+    }
+  };
   const patch = (n1, n2, container, anchor) => {
     if (n1 === n2) {
       return;
@@ -1116,7 +1122,7 @@ function createRenderer(renderOptions2) {
       unmount(n1);
       n1 = null;
     }
-    const { type, shapeFlag } = n2;
+    const { type, shapeFlag, ref: ref2 } = n2;
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor);
@@ -1131,6 +1137,9 @@ function createRenderer(renderOptions2) {
           processComponent(n1, n2, container, anchor);
         }
         break;
+    }
+    if (ref2 != null) {
+      setRef(ref2, n2);
     }
   };
   const render2 = (vNode, container) => {
