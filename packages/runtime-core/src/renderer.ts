@@ -45,17 +45,17 @@ export function createRenderer(renderOptions) {
   };
 
   // 递归挂载儿子(数组类型)元素
-  const mountChildren = (children, container) => {
+  const mountChildren = (children, container, anchor, parentComponent) => {
     // todo 暂时只考虑数组里面是h()
     // 如果是number或者string，就先让其变为虚拟节点，再patch
     // 所以如果children是数组，那么经过mountChildren()后，会变为vNode[]
     for (const item of children) {
-      patch(null, item, container);
+      patch(null, item, container, anchor, parentComponent);
     }
   };
 
   // 挂载元素
-  const mountElement = (vNode, container, anchor) => {
+  const mountElement = (vNode, container, anchor, parentComponent) => {
     const { type, props, children, shapeFlag } = vNode;
     // 创建元素
     const el = vNode.el = hostCreateElement(type);
@@ -74,7 +74,7 @@ export function createRenderer(renderOptions) {
       hostSetElementText(el, children);
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       // 递归渲染
-      mountChildren(children, el);
+      mountChildren(children, el, null, parentComponent);
     }
     
     hostInsert(el, container, anchor);
@@ -96,7 +96,7 @@ export function createRenderer(renderOptions) {
   };
 
   // 新旧children都是数组时，diff算法比较
-  const patchKeyedChildren = (c1, c2, el) => {
+  const patchKeyedChildren = (c1, c2, el, anchor, parentComponent) => {
     // 整理思路
     // 先从头开始比较后，改变和确认i，再从尾部开始比较后，改变和确认e1、e2
 
@@ -111,7 +111,7 @@ export function createRenderer(renderOptions) {
     while (i <= e1 && i <= e2) {
       // todo c2[i] 不一定是vNode，要在这让其变为vNode
       if (isSameVNodeType(c1[i], c2[i])) {
-        patch(c1[i], c2[i], el);
+        patch(c1[i], c2[i], el, anchor, parentComponent);
       } else {
         break;
       }
@@ -122,7 +122,7 @@ export function createRenderer(renderOptions) {
     while (i <= e1 && i <= e2) {
       // todo c2[e2] 不一定是vNode，要在这让其变为vNode
       if (isSameVNodeType(c1[e1], c2[e2])) {
-        patch(c1[e1], c2[e2], el);
+        patch(c1[e1], c2[e2], el, anchor, parentComponent);
       } else {
         break;
       }
@@ -151,7 +151,7 @@ export function createRenderer(renderOptions) {
         const anchor = c2[nextPos] === undefined ? null : c2[nextPos].el;
         while (i <= e2) {
           // todo c2[e2] 不一定是vNode，要在这让其变为vNode
-          patch(null, c2[i], el, anchor);
+          patch(null, c2[i], el, anchor, parentComponent);
           i++;
         }
       }
@@ -218,7 +218,7 @@ export function createRenderer(renderOptions) {
           // 更新相同key的vNode
           // newIndexToOldMapIndex里为0的项，证明没有相同的，是新的children新增的
           newIndexToOldMapIndex[newIndex - s2] = i + 1;
-          patch(vNode, c2[newIndex], el);
+          patch(vNode, c2[newIndex], el, anchor, parentComponent);
         }
       }
 
@@ -252,14 +252,14 @@ export function createRenderer(renderOptions) {
         }
         // newChild没有el说明旧的（c1）没有此虚拟节点，patch挂载上去
         else {
-          patch(null, newChild, el, anchor);
+          patch(null, newChild, el, anchor, parentComponent);
         }
       }
     }
   };
 
   // 比较children(直接处理对应的el元素)
-  const patchChildren = (n1, n2, el) => {
+  const patchChildren = (n1, n2, el, anchor, parentComponent) => {
     // 只有n1、n2都是元素节点才走这里，所以shapeFlag是元素节点和children的节点或运算出来的
     // n1是旧的，n2是新的
     const c1 = n1.children; // 因为上一次mountChildren做过处理，c1必定是vNode[]
@@ -296,10 +296,10 @@ export function createRenderer(renderOptions) {
       // 新的是数组
       if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         // diff算法
-        patchKeyedChildren(c1, c2, el);
+        patchKeyedChildren(c1, c2, el, anchor, parentComponent);
       } else {
         hostSetElementText(el, '');
-        mountChildren(c2, el);    
+        mountChildren(c2, el, null, parentComponent);    
       }
     } else if (shapeFlag & ShapeFlags.ELEMENT) {
       // 新的是文本
@@ -312,7 +312,7 @@ export function createRenderer(renderOptions) {
   };
 
   // 比较相同元素节点的差异
-  const patchElement = (n1, n2, container) => {
+  const patchElement = (n1, n2, parentComponent) => {
     // 复用dom元素
     const el = n2.el = n1.el;
 
@@ -323,17 +323,17 @@ export function createRenderer(renderOptions) {
     patchProps(oldProps, newProps, el);
     n2.props = n1.props;
 
-    patchChildren(n1, n2, el);
+    patchChildren(n1, n2, el, null, parentComponent);
     n2.children = n1.children;
   };
 
   // 处理元素
-  const processElement = (n1, n2, container, anchor) => {
+  const processElement = (n1, n2, container, anchor, parentComponent) => {
     // 初始化
     if (n1 === null) {
-      mountElement(n2, container, anchor);
+      mountElement(n2, container, anchor, parentComponent);
     } else {
-      patchElement(n1, n2, container);
+      patchElement(n1, n2, parentComponent);
     }
   };
 
@@ -351,14 +351,14 @@ export function createRenderer(renderOptions) {
   };
 
   // 处理Fragment
-  const processFragment = (n1, n2, container, anchor) => {
+  const processFragment = (n1, n2, container, anchor, parentComponent) => {
     if (n1 == null) {
       // n2.children肯定是数组
       // 和processElement、processText相比，不会创建n2.type的节点，所以少了给n2.el赋值，Fragment的vNode没有el
       // 正常mountChildren的container入参是根据n2.type创建的节点，再把根据n2.type创建的节点放入render的container，这里直接是把children放入render的container
-      mountChildren(n2.children, container);
+      mountChildren(n2.children, container, null, parentComponent);
     } else {
-      patchChildren(n1, n2, container);
+      patchChildren(n1, n2, container, null, parentComponent);
     }
   };
 
@@ -467,7 +467,7 @@ export function createRenderer(renderOptions) {
           invokeArray(bm);
         }
         const subtree = render.call(instance.proxy, instance.proxy);
-        patch(null, subtree, container, anchor);
+        patch(null, subtree, container, anchor, instance);
         instance.isMounted = true;
         instance.subtree = subtree;
         if (m) {
@@ -485,7 +485,7 @@ export function createRenderer(renderOptions) {
         }
         // 改变data会直接修改instance里的data，但是如果改变外部传入的props、slot，instance里的自定义的props和attrs不会改变，所以render.call可以获取data改变后的vNode，但是不能获取外部传入的props、slot改变后的vNode，需要手动更新instance
         const subtree = render.call(instance.proxy, instance.proxy);
-        patch(instance.subtree, subtree, container, anchor);
+        patch(instance.subtree, subtree, container, anchor, instance);
         instance.subtree = subtree;
         if (u) {
           invokeArray(u);
@@ -507,11 +507,11 @@ export function createRenderer(renderOptions) {
   };
 
   // 挂载组件
-  const mountComponent = (vNode, container, anchor) => {
+  const mountComponent = (vNode, container, anchor, parentComponent) => {
     // 1、创建组件实例
     // 元素更新 n2.el = n1.el
     // 组件更新 n2.component.subtree.el = n1.component.subtree.el
-    const instance = (vNode.component = createComponentInstance(vNode));
+    const instance = (vNode.component = createComponentInstance(vNode, parentComponent));
 
     // 2、给实例的属性赋值
     setupComponent(instance);
@@ -523,9 +523,9 @@ export function createRenderer(renderOptions) {
   // 处理组件
   // 组件会有两个虚拟节点，一个h(VueComponent)对象，一个组件里render返回的h()
   // html模版，最后也会解析成render函数返回的h()
-  const processComponent = (n1, n2, container, anchor) => {
+  const processComponent = (n1, n2, container, anchor, parentComponent) => {
     if (n1 == null) {
-      mountComponent(n2, container, anchor);
+      mountComponent(n2, container, anchor, parentComponent);
     } else {
       updateComponent(n1, n2);
     }
@@ -546,7 +546,7 @@ export function createRenderer(renderOptions) {
     container：装载的容器
     渲染走这里，更新也走这里
   */
-  const patch = (n1, n2, container, anchor?) => {
+  const patch = (n1, n2, container, anchor?, parentComponent?) => {
     // 两次渲染同一个元素跳过即可
     if (n1 === n2) {
       return;
@@ -567,16 +567,16 @@ export function createRenderer(renderOptions) {
         processText(n1, n2, container, anchor);
         break;
       case Fragment:
-        processFragment(n1, n2, container, anchor);
+        processFragment(n1, n2, container, anchor, parentComponent);
         break;
       default:
         // 元素
         if (shapeFlag & ShapeFlags.ELEMENT) {
-          processElement(n1, n2, container, anchor);
+          processElement(n1, n2, container, anchor, parentComponent);
         }
         // 组件
         else if (shapeFlag & ShapeFlags.COMPONENT) {
-          processComponent(n1, n2, container, anchor);
+          processComponent(n1, n2, container, anchor, parentComponent);
         }
         break;
     }

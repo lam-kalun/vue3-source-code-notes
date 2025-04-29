@@ -630,7 +630,7 @@ function queueJob(job) {
 }
 
 // packages/runtime-core/src/component.ts
-function createComponentInstance(vNode) {
+function createComponentInstance(vNode, parent) {
   const { props: propsOptions = {} } = vNode.type;
   const instance = {
     data: null,
@@ -655,8 +655,10 @@ function createComponentInstance(vNode) {
     render: null,
     next: null,
     // props、slot更新时，缓存的vNode
-    setupState: null
+    setupState: null,
     // setup返回的对象
+    parent,
+    provides: parent ? parent.provides : /* @__PURE__ */ Object.create(null)
   };
   return instance;
 }
@@ -830,12 +832,12 @@ function createRenderer(renderOptions2) {
       unmount(children[i]);
     }
   };
-  const mountChildren = (children, container) => {
+  const mountChildren = (children, container, anchor, parentComponent) => {
     for (const item of children) {
-      patch(null, item, container);
+      patch(null, item, container, anchor, parentComponent);
     }
   };
-  const mountElement = (vNode, container, anchor) => {
+  const mountElement = (vNode, container, anchor, parentComponent) => {
     const { type, props, children, shapeFlag } = vNode;
     const el = vNode.el = hostCreateElement(type);
     if (props) {
@@ -846,7 +848,7 @@ function createRenderer(renderOptions2) {
     if (shapeFlag & 8 /* TEXT_CHILDREN */) {
       hostSetElementText(el, children);
     } else if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
-      mountChildren(children, el);
+      mountChildren(children, el, null, parentComponent);
     }
     hostInsert(el, container, anchor);
   };
@@ -860,13 +862,13 @@ function createRenderer(renderOptions2) {
       }
     }
   };
-  const patchKeyedChildren = (c1, c2, el) => {
+  const patchKeyedChildren = (c1, c2, el, anchor, parentComponent) => {
     let i = 0;
     let e1 = c1.length - 1;
     let e2 = c2.length - 1;
     while (i <= e1 && i <= e2) {
       if (isSameVNodeType(c1[i], c2[i])) {
-        patch(c1[i], c2[i], el);
+        patch(c1[i], c2[i], el, anchor, parentComponent);
       } else {
         break;
       }
@@ -874,7 +876,7 @@ function createRenderer(renderOptions2) {
     }
     while (i <= e1 && i <= e2) {
       if (isSameVNodeType(c1[e1], c2[e2])) {
-        patch(c1[e1], c2[e2], el);
+        patch(c1[e1], c2[e2], el, anchor, parentComponent);
       } else {
         break;
       }
@@ -884,9 +886,9 @@ function createRenderer(renderOptions2) {
     if (i > e1) {
       if (i <= e2) {
         const nextPos = e2 + 1;
-        const anchor = c2[nextPos] === void 0 ? null : c2[nextPos].el;
+        const anchor2 = c2[nextPos] === void 0 ? null : c2[nextPos].el;
         while (i <= e2) {
-          patch(null, c2[i], el, anchor);
+          patch(null, c2[i], el, anchor2, parentComponent);
           i++;
         }
       }
@@ -914,7 +916,7 @@ function createRenderer(renderOptions2) {
           unmount(vNode);
         } else {
           newIndexToOldMapIndex[newIndex - s2] = i2 + 1;
-          patch(vNode, c2[newIndex], el);
+          patch(vNode, c2[newIndex], el, anchor, parentComponent);
         }
       }
       const increasingSeq = getSequence(newIndexToOldMapIndex);
@@ -922,20 +924,20 @@ function createRenderer(renderOptions2) {
       for (i = toBePatched - 1; i >= 0; i--) {
         const newIndex = s2 + i;
         const newChild = c2[newIndex];
-        const anchor = c2[newIndex + 1]?.el;
+        const anchor2 = c2[newIndex + 1]?.el;
         if (newChild.el) {
           if (i == increasingSeq[j]) {
             j--;
           } else {
-            hostInsert(newChild.el, el, anchor);
+            hostInsert(newChild.el, el, anchor2);
           }
         } else {
-          patch(null, newChild, el, anchor);
+          patch(null, newChild, el, anchor2, parentComponent);
         }
       }
     }
   };
-  const patchChildren = (n1, n2, el) => {
+  const patchChildren = (n1, n2, el, anchor, parentComponent) => {
     const c1 = n1.children;
     const c2 = n2.children;
     const prevShapeFlag = n1.shapeFlag;
@@ -949,10 +951,10 @@ function createRenderer(renderOptions2) {
       }
     } else if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
       if (prevShapeFlag & 16 /* ARRAY_CHILDREN */) {
-        patchKeyedChildren(c1, c2, el);
+        patchKeyedChildren(c1, c2, el, anchor, parentComponent);
       } else {
         hostSetElementText(el, "");
-        mountChildren(c2, el);
+        mountChildren(c2, el, null, parentComponent);
       }
     } else if (shapeFlag & 1 /* ELEMENT */) {
       if (prevShapeFlag & 16 /* ARRAY_CHILDREN */) {
@@ -962,20 +964,20 @@ function createRenderer(renderOptions2) {
       }
     }
   };
-  const patchElement = (n1, n2, container) => {
+  const patchElement = (n1, n2, parentComponent) => {
     const el = n2.el = n1.el;
     const oldProps = n1.props || {};
     const newProps = n2.props || {};
     patchProps(oldProps, newProps, el);
     n2.props = n1.props;
-    patchChildren(n1, n2, el);
+    patchChildren(n1, n2, el, null, parentComponent);
     n2.children = n1.children;
   };
-  const processElement = (n1, n2, container, anchor) => {
+  const processElement = (n1, n2, container, anchor, parentComponent) => {
     if (n1 === null) {
-      mountElement(n2, container, anchor);
+      mountElement(n2, container, anchor, parentComponent);
     } else {
-      patchElement(n1, n2, container);
+      patchElement(n1, n2, parentComponent);
     }
   };
   const processText = (n1, n2, container, anchor) => {
@@ -988,11 +990,11 @@ function createRenderer(renderOptions2) {
       }
     }
   };
-  const processFragment = (n1, n2, container, anchor) => {
+  const processFragment = (n1, n2, container, anchor, parentComponent) => {
     if (n1 == null) {
-      mountChildren(n2.children, container);
+      mountChildren(n2.children, container, null, parentComponent);
     } else {
-      patchChildren(n1, n2, container);
+      patchChildren(n1, n2, container, null, parentComponent);
     }
   };
   const hasPropsChanged = (prevProps, nextProps) => {
@@ -1067,7 +1069,7 @@ function createRenderer(renderOptions2) {
           invokeArray(bm);
         }
         const subtree = render3.call(instance.proxy, instance.proxy);
-        patch(null, subtree, container, anchor);
+        patch(null, subtree, container, anchor, instance);
         instance.isMounted = true;
         instance.subtree = subtree;
         if (m) {
@@ -1082,7 +1084,7 @@ function createRenderer(renderOptions2) {
           updateComponentPreRender(instance, next);
         }
         const subtree = render3.call(instance.proxy, instance.proxy);
-        patch(instance.subtree, subtree, container, anchor);
+        patch(instance.subtree, subtree, container, anchor, instance);
         instance.subtree = subtree;
         if (u) {
           invokeArray(u);
@@ -1095,14 +1097,14 @@ function createRenderer(renderOptions2) {
     const update = instance.update = () => effect2.run();
     update();
   };
-  const mountComponent = (vNode, container, anchor) => {
-    const instance = vNode.component = createComponentInstance(vNode);
+  const mountComponent = (vNode, container, anchor, parentComponent) => {
+    const instance = vNode.component = createComponentInstance(vNode, parentComponent);
     setupComponent(instance);
     setupRenderEffect(instance, container, anchor);
   };
-  const processComponent = (n1, n2, container, anchor) => {
+  const processComponent = (n1, n2, container, anchor, parentComponent) => {
     if (n1 == null) {
-      mountComponent(n2, container, anchor);
+      mountComponent(n2, container, anchor, parentComponent);
     } else {
       updateComponent(n1, n2);
     }
@@ -1113,7 +1115,7 @@ function createRenderer(renderOptions2) {
       rawRef.value = value;
     }
   };
-  const patch = (n1, n2, container, anchor) => {
+  const patch = (n1, n2, container, anchor, parentComponent) => {
     if (n1 === n2) {
       return;
     }
@@ -1128,13 +1130,13 @@ function createRenderer(renderOptions2) {
         processText(n1, n2, container, anchor);
         break;
       case Fragment:
-        processFragment(n1, n2, container, anchor);
+        processFragment(n1, n2, container, anchor, parentComponent);
         break;
       default:
         if (shapeFlag & 1 /* ELEMENT */) {
-          processElement(n1, n2, container, anchor);
+          processElement(n1, n2, container, anchor, parentComponent);
         } else if (shapeFlag & 6 /* COMPONENT */) {
-          processComponent(n1, n2, container, anchor);
+          processComponent(n1, n2, container, anchor, parentComponent);
         }
         break;
     }
@@ -1179,6 +1181,30 @@ function h(type, propsOrChildren, children) {
   return createVNode(type, propsOrChildren, children);
 }
 
+// packages/runtime-core/src/apiInject.ts
+var provide = (key, value) => {
+  if (!currentInstance) {
+    return;
+  }
+  let provides = currentInstance.provides;
+  const parentProvides = currentInstance.parent && currentInstance.parent.provides;
+  if (provides === parentProvides) {
+    provides = currentInstance.provides = Object.create(parentProvides);
+  }
+  provides[key] = value;
+};
+var inject = (key, defaultValue) => {
+  if (!currentInstance) {
+    return;
+  }
+  const parentProvides = currentInstance.parent && currentInstance.parent.provides;
+  if (parentProvides && key in parentProvides) {
+    return parentProvides[key];
+  } else {
+    return defaultValue;
+  }
+};
+
 // packages/runtime-dom/src/index.ts
 var renderOptions = Object.assign({ patchProp }, nodeOps);
 var render = (vNode, container) => {
@@ -1197,6 +1223,7 @@ export {
   effect,
   getCurrentInstance,
   h,
+  inject,
   invokeArray,
   isReactive,
   isRef,
@@ -1206,6 +1233,7 @@ export {
   onBeforeUpdate,
   onMounted,
   onUpdated,
+  provide,
   proxyRefs,
   reactive,
   ref,

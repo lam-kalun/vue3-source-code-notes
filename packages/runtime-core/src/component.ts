@@ -2,7 +2,7 @@ import { proxyRefs, reactive } from "@vue/reactivity";
 import { hasOwn, isFunction, isObject, ShapeFlags } from "@vue/shared";
 import { createVNode, Fragment } from "./vnode";
 
-export function createComponentInstance(vNode) {
+export function createComponentInstance(vNode, parent) {
   const { props: propsOptions = {} } = vNode.type;
   // 组件实例(只有在初始patch vNode时才会创建)
   const instance = {
@@ -21,6 +21,8 @@ export function createComponentInstance(vNode) {
     render: null,
     next: null, // props、slot更新时，缓存的vNode
     setupState: null, // setup返回的对象
+    parent,
+    provides: parent ? parent.provides : Object.create(null),
   };
   return instance;
 };

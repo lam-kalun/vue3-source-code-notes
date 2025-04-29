@@ -19,7 +19,9 @@
       // onMounted,
       // onBeforeUpdate,
       // onUpdated,
-      // getCurrentInstance
+      // getCurrentInstance,
+      // provide,
+      // inject
     } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.prod.js';
 
     // 自己的
@@ -33,7 +35,9 @@
       onMounted,
       onBeforeUpdate,
       onUpdated,
-      getCurrentInstance
+      getCurrentInstance,
+      provide,
+      inject
     } from './runtime-dom.js';
 
     // const VueComponent = {
@@ -112,7 +116,6 @@
     //   },
     //   render(proxy) {
     //     console.log('runner');
-        
     //     return h(Fragment, [
     //       h('button', { onClick: () => { this.flag = !this.flag; this.flag_2 = !this.flag_2; } }, 'hit me'),
     //       // 实验不是用户定义的props，也被放入instance.props了
@@ -348,28 +351,59 @@
 
 
     // 组件ref
-    const childComponent = {
-      props: {
-        a: Number
-      },
-      setup(props, {expose}) {
-        // expose({
-        //   a: 800
-        // });
-        return () => h('div', props.a);
-      }
-    };
-    const parentComponent = {
+    // const childComponent = {
+    //   props: {
+    //     a: Number
+    //   },
+    //   setup(props, {expose}) {
+    //     // expose({
+    //     //   a: 800
+    //     // });
+    //     return () => h('div', props.a);
+    //   }
+    // };
+    // const parentComponent = {
+    //   setup() {
+    //     const comp = ref(null);
+    //     onMounted(() => {
+    //       console.log(comp.value);
+    //     });
+    //     return () => h(childComponent, {ref: comp, a: 200});
+    //     // return () => h('div', {ref: comp, a: 200});
+    //   }
+    // };
+    // render(h(parentComponent), app);
+
+
+    // 依赖注入
+    const P3 = {
       setup() {
-        const comp = ref(null);
-        onMounted(() => {
-          console.log(comp.value);
-        });
-        return () => h(childComponent, {ref: comp, a: 200});
-        // return () => h('div', {ref: comp, a: 200});
+        const reactiveV = inject('reactiveKey');
+        return {
+          reactiveV
+        };
+      },
+      render(proxy) {
+        // todo 兼容数组里字符串问题
+        return h('div', [h(Text, proxy.reactiveV)]);
       }
     };
-    render(h(parentComponent), app);
+    const P2 = {
+      setup() {
+       return () => h(P3); 
+      }
+    };
+    const P1 = {
+      setup() {
+        const reactiveV = ref('I am 1');
+        setTimeout(() => {
+          reactiveV.value = 'oh, now I am 2';
+        }, 1000);
+        provide('reactiveKey', reactiveV)
+        return () => h(P2);
+      }
+    };
+    render(h(P1), app);
   </script>
 </body>
 </html>
