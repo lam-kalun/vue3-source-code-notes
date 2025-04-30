@@ -1,5 +1,8 @@
 import { isObject, isString, ShapeFlags } from "@vue/shared";
 
+export const Text = Symbol.for('Text');
+export const Fragment = Symbol.for('Fragment');
+
 export function createVNode(type, props, children?) {
   // 元素节点1 组件节点4 其他节点0
   const shapeFlag = isString(type)
@@ -44,6 +47,12 @@ export function isSameVNodeType(n1, n2) {
   return n1.type === n2.type && n1.key === n2.key;
 };
 
-export const Text = Symbol('Text');
-
-export const Fragment = Symbol('Fragment');
+export function normalizeVNode(child) {
+  if (Array.isArray(child)) {
+    return createVNode(Fragment, null, child.slice());
+  } else if (isVNode(child)) {
+    return child;
+  } else if (typeof child === 'string' || typeof child === 'number') {
+    return createVNode(Text, null, String(child));
+  }
+};

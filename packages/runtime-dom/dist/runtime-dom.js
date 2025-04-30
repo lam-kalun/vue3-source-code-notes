@@ -126,6 +126,8 @@ var hasOwnProperty = Object.prototype.hasOwnProperty;
 var hasOwn = (val, key) => hasOwnProperty.call(val, key);
 
 // packages/runtime-core/src/vnode.ts
+var Text = Symbol.for("Text");
+var Fragment = Symbol.for("Fragment");
 function createVNode(type, props, children) {
   const shapeFlag = isString(type) ? 1 /* ELEMENT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
   const vNode = {
@@ -156,8 +158,15 @@ var isVNode = (value) => {
 function isSameVNodeType(n1, n2) {
   return n1.type === n2.type && n1.key === n2.key;
 }
-var Text = Symbol("Text");
-var Fragment = Symbol("Fragment");
+function normalizeVNode(child) {
+  if (Array.isArray(child)) {
+    return createVNode(Fragment, null, child.slice());
+  } else if (isVNode(child)) {
+    return child;
+  } else if (typeof child === "string" || typeof child === "number") {
+    return createVNode(Text, null, String(child));
+  }
+}
 
 // packages/runtime-core/src/seq.ts
 function getSequence(arr) {
@@ -833,8 +842,9 @@ function createRenderer(renderOptions2) {
     }
   };
   const mountChildren = (children, container, anchor, parentComponent) => {
-    for (const item of children) {
-      patch(null, item, container, anchor, parentComponent);
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i] = normalizeVNode(children[i]);
+      patch(null, child, container, anchor, parentComponent);
     }
   };
   const mountElement = (vNode, container, anchor, parentComponent) => {
@@ -867,16 +877,20 @@ function createRenderer(renderOptions2) {
     let e1 = c1.length - 1;
     let e2 = c2.length - 1;
     while (i <= e1 && i <= e2) {
-      if (isSameVNodeType(c1[i], c2[i])) {
-        patch(c1[i], c2[i], el, anchor, parentComponent);
+      const n1 = c1[i];
+      const n2 = normalizeVNode(c2[i]);
+      if (isSameVNodeType(n1, n2)) {
+        patch(n1, n2, el, anchor, parentComponent);
       } else {
         break;
       }
       i++;
     }
     while (i <= e1 && i <= e2) {
-      if (isSameVNodeType(c1[e1], c2[e2])) {
-        patch(c1[e1], c2[e2], el, anchor, parentComponent);
+      const n1 = c1[e1];
+      const n2 = normalizeVNode(c2[e2]);
+      if (isSameVNodeType(n1, n2)) {
+        patch(n1, n2, el, anchor, parentComponent);
       } else {
         break;
       }
@@ -888,7 +902,7 @@ function createRenderer(renderOptions2) {
         const nextPos = e2 + 1;
         const anchor2 = c2[nextPos] === void 0 ? null : c2[nextPos].el;
         while (i <= e2) {
-          patch(null, c2[i], el, anchor2, parentComponent);
+          patch(null, normalizeVNode(c2[i]), el, anchor2, parentComponent);
           i++;
         }
       }
@@ -904,7 +918,7 @@ function createRenderer(renderOptions2) {
       const toBePatched = e2 - s2 + 1;
       const newIndexToOldMapIndex = new Array(toBePatched).fill(0);
       for (i = s2; i <= e2; i++) {
-        const vNode = c2[i];
+        const vNode = normalizeVNode(c2[i]);
         if (vNode.key !== void 0) {
           keyToNewIndexMap.set(vNode.key, i);
         }
@@ -1229,6 +1243,7 @@ export {
   isRef,
   isSameVNodeType,
   isVNode,
+  normalizeVNode,
   onBeforeMount,
   onBeforeUpdate,
   onMounted,

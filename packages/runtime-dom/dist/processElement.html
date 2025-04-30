@@ -84,6 +84,16 @@
     // setTimeout(() => {
     //   render(ele2, app);
     // }, 1000);
+
+
+    // 元素节点、属性相同，children都是字符串数组
+    const ele1 = h('h1', ['a', 'c', 'd']);
+    const ele2 = h('h1', ['a', 'd', 'c', 'e']);
+    // 因为没有key值，'c'会被认为和'd'是相同的vNode，所以会先变为add，再删除最后的'd'变为ad
+    render(ele1, app);
+    setTimeout(() => {
+      render(ele2, app);
+    }, 1000);
   </script>
 </body>
 </html>

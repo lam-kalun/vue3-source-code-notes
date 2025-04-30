@@ -1,5 +1,5 @@
 import { hasOwn, ShapeFlags } from "@vue/shared";
-import { Fragment, isSameVNodeType, Text } from "./vnode";
+import { Fragment, isSameVNodeType, normalizeVNode, Text } from "./vnode";
 import getSequence from "./seq";
 import { isRef, ReactiveEffect } from '@vue/reactivity';
 import { queueJob } from "./scheduler";
@@ -46,11 +46,11 @@ export function createRenderer(renderOptions) {
 
   // 递归挂载儿子(数组类型)元素
   const mountChildren = (children, container, anchor, parentComponent) => {
-    // todo 暂时只考虑数组里面是h()
     // 如果是number或者string，就先让其变为虚拟节点，再patch
     // 所以如果children是数组，那么经过mountChildren()后，会变为vNode[]
-    for (const item of children) {
-      patch(null, item, container, anchor, parentComponent);
+    for (let i = 0; i < children.length; i++) {
+      const child = (children[i] = normalizeVNode(children[i]));
+      patch(null, child, container, anchor, parentComponent);
     }
   };
 
@@ -109,9 +109,10 @@ export function createRenderer(renderOptions) {
 
     // 从头开始比较，相同的虚拟节点，直接渲染在元素节点上
     while (i <= e1 && i <= e2) {
-      // todo c2[i] 不一定是vNode，要在这让其变为vNode
-      if (isSameVNodeType(c1[i], c2[i])) {
-        patch(c1[i], c2[i], el, anchor, parentComponent);
+      const n1 = c1[i];
+      const n2 = normalizeVNode(c2[i]);
+      if (isSameVNodeType(n1, n2)) {
+        patch(n1, n2, el, anchor, parentComponent);
       } else {
         break;
       }
@@ -120,9 +121,10 @@ export function createRenderer(renderOptions) {
 
     // 再从尾部开始比较，相同的虚拟节点，直接渲染在元素节点上
     while (i <= e1 && i <= e2) {
-      // todo c2[e2] 不一定是vNode，要在这让其变为vNode
-      if (isSameVNodeType(c1[e1], c2[e2])) {
-        patch(c1[e1], c2[e2], el, anchor, parentComponent);
+      const n1 = c1[e1];
+      const n2 = normalizeVNode(c2[e2]);
+      if (isSameVNodeType(n1, n2)) {
+        patch(n1, n2, el, anchor, parentComponent);
       } else {
         break;
       }
@@ -150,8 +152,7 @@ export function createRenderer(renderOptions) {
         // c2[nextPos]已经在上面变为了vNode
         const anchor = c2[nextPos] === undefined ? null : c2[nextPos].el;
         while (i <= e2) {
-          // todo c2[e2] 不一定是vNode，要在这让其变为vNode
-          patch(null, c2[i], el, anchor, parentComponent);
+          patch(null, normalizeVNode(c2[i]), el, anchor, parentComponent);
           i++;
         }
       }
@@ -198,8 +199,7 @@ export function createRenderer(renderOptions) {
 
       // 将新的vNode的key、index放入keyToNewIndexMap
       for (i = s2; i <= e2; i++) {
-        // todo c2[e2] 不一定是vNode，要在这让其变为vNode
-        const vNode = c2[i];
+        const vNode = normalizeVNode(c2[i]);
         if (vNode.key !== undefined) {
           keyToNewIndexMap.set(vNode.key, i);
         }
