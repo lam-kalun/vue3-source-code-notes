@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="root"></div>
+  <div id="root2"></div>
+  <script type="module">
+    import {
+      // h,
+      // render,
+      // Teleport,
+    } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js';
+
+    import {
+      h,
+      render,
+      Teleport,
+    } from './runtime-dom.js';
+    
+    render(h(Teleport, {to: '#root'}, ['我在外面', 111, '啊啊啊']), app);
+    setTimeout(() => {
+      // render(h(Teleport, {to: '#root2'}, ['我在外面', 222, '啊啊啊']), app);
+      render(null, app);
+    }, 1000);
+  </script>
+</body>
+</html>

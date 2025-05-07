@@ -32,6 +32,9 @@ export function createRenderer(renderOptions) {
       // subtree有可能还是Fragment、COMPONENT等其他类型
       unmount(vNode.component.subtree);
     }
+    else if (shapeFlag & ShapeFlags.TELEPORT) {
+      vNode.type.remove(vNode, internals);
+    }
     else {
       hostRemove(vNode.el);
     }
@@ -106,11 +109,10 @@ export function createRenderer(renderOptions) {
     let e1 = c1.length - 1;
     // c2结束的索引
     let e2 = c2.length - 1;
-
     // 从头开始比较，相同的虚拟节点，直接渲染在元素节点上
     while (i <= e1 && i <= e2) {
       const n1 = c1[i];
-      const n2 = normalizeVNode(c2[i]);
+      const n2 = (c2[i] = normalizeVNode(c2[i]));
       if (isSameVNodeType(n1, n2)) {
         patch(n1, n2, el, anchor, parentComponent);
       } else {
@@ -122,7 +124,7 @@ export function createRenderer(renderOptions) {
     // 再从尾部开始比较，相同的虚拟节点，直接渲染在元素节点上
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1];
-      const n2 = normalizeVNode(c2[e2]);
+      const n2 = (c2[e2] = normalizeVNode(c2[e2]));
       if (isSameVNodeType(n1, n2)) {
         patch(n1, n2, el, anchor, parentComponent);
       } else {
@@ -152,7 +154,7 @@ export function createRenderer(renderOptions) {
         // c2[nextPos]已经在上面变为了vNode
         const anchor = c2[nextPos] === undefined ? null : c2[nextPos].el;
         while (i <= e2) {
-          patch(null, normalizeVNode(c2[i]), el, anchor, parentComponent);
+          patch(null, (c2[i] = normalizeVNode(c2[i])), el, anchor, parentComponent);
           i++;
         }
       }
@@ -199,7 +201,7 @@ export function createRenderer(renderOptions) {
 
       // 将新的vNode的key、index放入keyToNewIndexMap
       for (i = s2; i <= e2; i++) {
-        const vNode = normalizeVNode(c2[i]);
+        const vNode = (c2[i] = normalizeVNode(c2[i]));
         if (vNode.key !== undefined) {
           keyToNewIndexMap.set(vNode.key, i);
         }
@@ -539,6 +541,19 @@ export function createRenderer(renderOptions) {
       rawRef.value = value;
     }
   };
+
+  const move = (vNode, container, anchor) => {
+    // todo 兼容Fragment、嵌套Teleport
+    const el = vNode.component ? vNode.component.subtree.el : vNode.el;
+    hostInsert(el, container, anchor);
+  };
+
+  const internals = {
+    um: unmount,
+    m: move,
+    mc: mountChildren,
+    pc: patchChildren,
+  };
  
   /*
     n1：旧vNode值
@@ -577,6 +592,10 @@ export function createRenderer(renderOptions) {
         // 组件
         else if (shapeFlag & ShapeFlags.COMPONENT) {
           processComponent(n1, n2, container, anchor, parentComponent);
+        }
+        // Teleport组件
+        else if (shapeFlag & ShapeFlags.TELEPORT) {
+          type.process(n1, n2, container, anchor, parentComponent, internals);
         }
         break;
     }

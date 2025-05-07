@@ -129,7 +129,7 @@ var hasOwn = (val, key) => hasOwnProperty.call(val, key);
 var Text = Symbol.for("Text");
 var Fragment = Symbol.for("Fragment");
 function createVNode(type, props, children) {
-  const shapeFlag = isString(type) ? 1 /* ELEMENT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
+  const shapeFlag = isString(type) ? 1 /* ELEMENT */ : isTeleport(type) ? 64 /* TELEPORT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
   const vNode = {
     __v_isVNode: true,
     type,
@@ -157,6 +157,9 @@ var isVNode = (value) => {
 };
 function isSameVNodeType(n1, n2) {
   return n1.type === n2.type && n1.key === n2.key;
+}
+function isTeleport(value) {
+  return value ? value.__isTeleport === true : false;
 }
 function normalizeVNode(child) {
   if (Array.isArray(child)) {
@@ -832,6 +835,8 @@ function createRenderer(renderOptions2) {
       unmountChildren(vNode.children);
     } else if (shapeFlag & 6 /* COMPONENT */) {
       unmount(vNode.component.subtree);
+    } else if (shapeFlag & 64 /* TELEPORT */) {
+      vNode.type.remove(vNode, internals);
     } else {
       hostRemove(vNode.el);
     }
@@ -878,7 +883,7 @@ function createRenderer(renderOptions2) {
     let e2 = c2.length - 1;
     while (i <= e1 && i <= e2) {
       const n1 = c1[i];
-      const n2 = normalizeVNode(c2[i]);
+      const n2 = c2[i] = normalizeVNode(c2[i]);
       if (isSameVNodeType(n1, n2)) {
         patch(n1, n2, el, anchor, parentComponent);
       } else {
@@ -888,7 +893,7 @@ function createRenderer(renderOptions2) {
     }
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1];
-      const n2 = normalizeVNode(c2[e2]);
+      const n2 = c2[e2] = normalizeVNode(c2[e2]);
       if (isSameVNodeType(n1, n2)) {
         patch(n1, n2, el, anchor, parentComponent);
       } else {
@@ -902,7 +907,7 @@ function createRenderer(renderOptions2) {
         const nextPos = e2 + 1;
         const anchor2 = c2[nextPos] === void 0 ? null : c2[nextPos].el;
         while (i <= e2) {
-          patch(null, normalizeVNode(c2[i]), el, anchor2, parentComponent);
+          patch(null, c2[i] = normalizeVNode(c2[i]), el, anchor2, parentComponent);
           i++;
         }
       }
@@ -918,7 +923,7 @@ function createRenderer(renderOptions2) {
       const toBePatched = e2 - s2 + 1;
       const newIndexToOldMapIndex = new Array(toBePatched).fill(0);
       for (i = s2; i <= e2; i++) {
-        const vNode = normalizeVNode(c2[i]);
+        const vNode = c2[i] = normalizeVNode(c2[i]);
         if (vNode.key !== void 0) {
           keyToNewIndexMap.set(vNode.key, i);
         }
@@ -1129,6 +1134,16 @@ function createRenderer(renderOptions2) {
       rawRef.value = value;
     }
   };
+  const move = (vNode, container, anchor) => {
+    const el = vNode.component ? vNode.component.subtree.el : vNode.el;
+    hostInsert(el, container, anchor);
+  };
+  const internals = {
+    um: unmount,
+    m: move,
+    mc: mountChildren,
+    pc: patchChildren
+  };
   const patch = (n1, n2, container, anchor, parentComponent) => {
     if (n1 === n2) {
       return;
@@ -1151,6 +1166,8 @@ function createRenderer(renderOptions2) {
           processElement(n1, n2, container, anchor, parentComponent);
         } else if (shapeFlag & 6 /* COMPONENT */) {
           processComponent(n1, n2, container, anchor, parentComponent);
+        } else if (shapeFlag & 64 /* TELEPORT */) {
+          type.process(n1, n2, container, anchor, parentComponent, internals);
         }
         break;
     }
@@ -1219,6 +1236,44 @@ var inject = (key, defaultValue) => {
   }
 };
 
+// packages/runtime-core/src/components/Teleport.ts
+var Teleport = {
+  name: "Teleport",
+  __isTeleport: true,
+  process(n1, n2, container, anchor, parentComponent, internals) {
+    const {
+      m: move,
+      mc: mountChildren,
+      pc: patchChildren
+    } = internals;
+    if (n1 == null) {
+      const target = n2.target = document.querySelector(n2.props.to);
+      if (target) {
+        mountChildren(n2.children, target, anchor, parentComponent);
+      }
+    } else {
+      patchChildren(n1, n2, n2.target, anchor, parentComponent);
+      if ((n2.props && n2.props.to) !== (n1.props && n1.props.to)) {
+        const nextTarget = n2.target = document.querySelector(n2.props.to);
+        if (n2.shapeFlag & 16 /* ARRAY_CHILDREN */) {
+          for (let child of n2.children) {
+            move(child, nextTarget, anchor);
+          }
+        }
+      }
+    }
+  },
+  remove(vNode, internals) {
+    const { children, shapeFlag } = vNode;
+    const { um: unmount } = internals;
+    if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
+      for (let child of children) {
+        unmount(child);
+      }
+    }
+  }
+};
+
 // packages/runtime-dom/src/index.ts
 var renderOptions = Object.assign({ patchProp }, nodeOps);
 var render = (vNode, container) => {
@@ -1227,6 +1282,7 @@ var render = (vNode, container) => {
 export {
   Fragment,
   ReactiveEffect,
+  Teleport,
   Text,
   activeEffect,
   computed,
@@ -1242,6 +1298,7 @@ export {
   isReactive,
   isRef,
   isSameVNodeType,
+  isTeleport,
   isVNode,
   normalizeVNode,
   onBeforeMount,

@@ -7,6 +7,8 @@ export function createVNode(type, props, children?) {
   // 元素节点1 组件节点4 其他节点0
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
+    : isTeleport(type)
+    ? ShapeFlags.TELEPORT
     : isObject(type)
     ? ShapeFlags.STATEFUL_COMPONENT
     : 0;
@@ -45,6 +47,10 @@ export const isVNode = (value) => {
 
 export function isSameVNodeType(n1, n2) {
   return n1.type === n2.type && n1.key === n2.key;
+};
+
+export function isTeleport(value) {
+  return value ? value.__isTeleport === true : false;
 };
 
 export function normalizeVNode(child) {
