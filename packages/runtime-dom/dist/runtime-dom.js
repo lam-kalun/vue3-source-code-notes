@@ -1274,6 +1274,80 @@ var Teleport = {
   }
 };
 
+// packages/runtime-core/src/apiAsyncComponent.ts
+function defineAsyncComponent(source) {
+  return {
+    setup() {
+      if (isFunction(source)) {
+        source = {
+          loader: source
+        };
+      }
+      const {
+        loader,
+        errorComponent,
+        delay = 200,
+        loadingComponent,
+        timeout,
+        onError: userOnError
+      } = source;
+      let resolvedComp = null;
+      const loaded = ref(false);
+      const error = ref(false);
+      const delayed = ref(!!delay);
+      let loadingTimer = null;
+      if (delay) {
+        setTimeout(() => {
+          delayed.value = false;
+        }, delay);
+      }
+      if (timeout != null) {
+        setTimeout(() => {
+          if (!loaded.value && !error.value) {
+            const err = new Error(
+              `Async component timed out after ${timeout}ms.`
+            );
+            error.value = err;
+          }
+        }, timeout);
+      }
+      let retries = 0;
+      const load = () => {
+        return loader().catch((err) => {
+          err = err instanceof Error ? err : new Error(String(err));
+          if (userOnError) {
+            return new Promise((resolve, reject) => {
+              const userRetry = () => resolve(load());
+              const userFail = () => reject(err);
+              userOnError(err, userRetry, userFail, ++retries);
+            });
+          } else {
+            throw err;
+          }
+        });
+      };
+      load().then((comp) => {
+        resolvedComp = comp;
+        loaded.value = true;
+      }).catch((err) => {
+        error.value = err;
+        throw err;
+      });
+      return () => {
+        if (loaded.value && resolvedComp) {
+          return h(resolvedComp);
+        } else if (error.value && errorComponent) {
+          return h(errorComponent);
+        } else if (!delayed.value && loadingComponent) {
+          return h(loadingComponent);
+        } else {
+          return h("div");
+        }
+      };
+    }
+  };
+}
+
 // packages/runtime-dom/src/index.ts
 var renderOptions = Object.assign({ patchProp }, nodeOps);
 var render = (vNode, container) => {
@@ -1290,6 +1364,7 @@ export {
   createRenderer,
   createVNode,
   currentInstance,
+  defineAsyncComponent,
   effect,
   getCurrentInstance,
   h,

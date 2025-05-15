@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import {
+      // h,
+      // render,
+      // defineAsyncComponent
+    } from '/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js';
+
+    import {
+      h,
+      render,
+      defineAsyncComponent
+    } from './runtime-dom.js';
+
+    const errorComponent = {
+      setup() {
+        return () => h('div', '我不是你要的组件');
+      }
+    };
+
+    const loadingComponent = {
+      setup() {
+        return () => h(
+          'div',
+          { style: { width: '100%', height: '100%', 'background-color': '#9e9e9e4f'} },
+          'loading...'
+        )
+      }
+    };
+
+    let retries = 1;
+    const asyncComponent = defineAsyncComponent({
+      // 返回的是Promise
+      // loader: import('./defineAsyncComponent.js'),
+      loader: () =>  new Promise((resolve, reject) => {
+        setTimeout(() => {
+          if (retries++ === 4) {
+            resolve({
+              setup() {
+                return () => h('div', '我就是组件');
+              }
+            });
+          } else {
+            reject(false);
+          }
+        }, 1000);
+      }), // 加载函数
+      errorComponent, // 加载失败后展示的组件
+      // delay: 500, // 展示加载组件前的延迟时间
+      // loadingComponent, // 加载异步组件时使用的组件
+      // timeout: 1000,
+      onError: (err, userRetry, userFail, retries) => {
+        setTimeout(() => {
+          if (retries < 3) {
+            console.log('重新加载');
+            userRetry();
+          } else {
+            userFail();
+          }
+        }, 1000);
+      },
+    });
+    render(h(asyncComponent), app);
+
+
+    // 只会触发一次debugger
+    // const resolvedComp = new Promise(() => {
+    //   debugger
+    // });
+    // const loader = () => resolvedComp;
+    // loader();
+    // loader();
+    // loader();
+  </script>
+  <style>
+    html {
+      width: 100%;
+      height: 100%;
+    }
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+    #app {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</body>
+</html>

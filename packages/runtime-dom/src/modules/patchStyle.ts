@@ -1,5 +1,6 @@
 export default function patchStyle(el, prevValue, nextValue) {
   const style = el.style;
+  // todo 兼容style不是对象传入，是字符串传入
   for (const key in nextValue) {
     // 新样式全部生效
     style[key] = nextValue[key];

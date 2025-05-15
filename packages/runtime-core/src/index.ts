@@ -5,3 +5,4 @@ export * from './component';
 export * from './apiLifecycle';
 export * from './apiInject';
 export * from './components/Teleport';
+export * from './apiAsyncComponent';
