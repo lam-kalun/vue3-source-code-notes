@@ -1295,7 +1295,6 @@ function defineAsyncComponent(source) {
       const loaded = ref(false);
       const error = ref(false);
       const delayed = ref(!!delay);
-      let loadingTimer = null;
       if (delay) {
         setTimeout(() => {
           delayed.value = false;

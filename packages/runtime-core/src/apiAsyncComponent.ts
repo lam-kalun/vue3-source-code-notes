@@ -27,8 +27,6 @@ export function defineAsyncComponent(source) {
       const error = ref(false);
       // 是否在延迟时间内
       const delayed = ref(!!delay);
-      // 超时监听器
-      let loadingTimer = null;
 
       if (delay) {
         // 如果delay > 组件异步加载的时间

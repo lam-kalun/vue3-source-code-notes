@@ -42,21 +42,22 @@
       // loader: import('./defineAsyncComponent.js'),
       loader: () =>  new Promise((resolve, reject) => {
         setTimeout(() => {
-          if (retries++ === 4) {
+          // if (retries++ === 3) {
             resolve({
               setup() {
                 return () => h('div', '我就是组件');
               }
             });
-          } else {
-            reject(false);
-          }
-        }, 1000);
+          // } else {
+          //   reject(false);
+          // }
+        }, 3000);
       }), // 加载函数
       errorComponent, // 加载失败后展示的组件
-      // delay: 500, // 展示加载组件前的延迟时间
-      // loadingComponent, // 加载异步组件时使用的组件
+      delay: 500, // 展示加载组件前的延迟时间
+      loadingComponent, // 加载异步组件时使用的组件
       // timeout: 1000,
+      // 就算timeout，但是loader还在padding，就不会触发onError
       onError: (err, userRetry, userFail, retries) => {
         setTimeout(() => {
           if (retries < 3) {
