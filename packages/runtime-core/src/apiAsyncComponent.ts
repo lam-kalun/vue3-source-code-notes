@@ -53,7 +53,7 @@ export function defineAsyncComponent(source) {
         // .catch、.then、.finally会返回一个Promise
         return loader().catch((err) => {
           // 防止reject(false)时，error.value不能通过error.value &&
-          err = err instanceof Error ? err : new Error(String(err))
+          err = err instanceof Error ? err : new Error(String(err));
           if (userOnError) {
             return new Promise((resolve, reject) => {
               const userRetry = () => resolve(load());
@@ -88,7 +88,7 @@ export function defineAsyncComponent(source) {
           // todo 源码是<!-->
           return h('div');
         }
-      }
+      };
     }
   };
 };

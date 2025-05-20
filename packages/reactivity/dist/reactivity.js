@@ -39,7 +39,7 @@ function postCleanEffect(effect2) {
 }
 var ReactiveEffect = class {
   // 收集当前effect内的属性（如name、age）所对应的dep
-  // 如果fn中依赖的数据发生变化，需求重新调用run
+  // 如果fn中依赖的数据发生变化，需要重新调用run
   constructor(fn, scheduler) {
     this.fn = fn;
     this.scheduler = scheduler;

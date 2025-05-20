@@ -10,5 +10,6 @@ export const render = (vNode, container) => {
 
 // 私人醒噶
 export { renderOptions };
+export * from '@vue/shared';
 export * from '@vue/reactivity';
 export * from '@vue/runtime-core';

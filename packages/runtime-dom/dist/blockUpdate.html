@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>靶向更新</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      import {
+        createElementVNode as _createElementVNode,
+        toDisplayString as _toDisplayString,
+        openBlock as _openBlock,
+        createElementBlock as _createElementBlock,
+        reactive,
+        toRefs,
+        render,
+        h
+      // } from "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js";
+      } from "./runtime-dom.js";
+
+      const MyComponent = {
+        setup() {
+          const state = reactive({
+            name: '我出现了'
+          });
+          setTimeout(() => {
+            state.name = '我更新了';
+          }, 1000);
+          return {
+            ...toRefs(state)
+          }
+        },
+        render(_ctx, _cache, $props, $setup, $data, $options) {
+          return (
+            _openBlock(),
+            _createElementBlock("div", null, [
+              _createElementVNode("span", null, "我是不动的"),
+              _createElementVNode(
+                "h1",
+                null,
+                _toDisplayString(_ctx.name),
+                1 /* TEXT */
+              ),
+            ])
+          );
+        }
+      };
+      render(h(MyComponent), app);
+
+
+      // 走else if (!optimized)的例子
+      // 1、失败的man
+      // const Comp = {
+      //   render(_ctx, _cache, $props, $setup, $data, $options) {
+      //     return (_openBlock(), _createElementBlock("div", null, [
+      //       _createElementVNode("span", null, "Hello World")
+      //     ]));
+      //   }
+      // };
+      // const NextComp = {
+      //   render(_ctx, _cache, $props, $setup, $data, $options) {
+      //     return (_openBlock(), _createElementBlock("div", null, [
+      //       _createElementVNode("span", null, "Big Hello World")
+      //     ]));
+      //   }
+      // };
+      // render(h(Comp), app);
+      // setTimeout(() => {
+      //   render(h(NextComp), app);
+      // }, 1000);
+      // 2、
+      // render(_createElementVNode("div", null, "Hello World"), app);
+      // setTimeout(() => {
+      //   render(_createElementVNode("div", null, "Big Hello World"), app);
+      // }, 1000);
+    </script>
+  </body>
+</html>

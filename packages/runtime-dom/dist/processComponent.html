@@ -171,31 +171,32 @@
     // 父componentUpdateFn -> patch -> patchChildren -> patchComponent -> updateComponent（n2复用n1.component） -> 改变子instance.next(初始挂载时会把instance赋值到vNode.component上) -> instance.update -> 子componentUpdateFn
 
 
-    // const VueComponent = {
-    //   setup() {
-    //     const a = ref(1);
-    //     setTimeout(() => {
-    //       a.value = 2;
-    //     }, 1000);
-    //     // return {
-    //     //   a
-    //     // }
-    //     // return () => h('div', a.value);
-    //     return () => h(Fragment, [
-    //       h('button', {onClick: () => { a.value++ }}, '+++'),
-    //       h('div', a.value)
-    //     ]);
-    //   },
-    //   // 相当于html模版
-    //   // render(proxy) {
-    //   //   // return h('div', proxy.a);
-    //   //   return h(Fragment, [
-    //   //     h('button', {onClick: () => { proxy.a++ }}, '+++'),
-    //   //     h('div', proxy.a)
-    //   //   ])
-    //   // };
-    // };
-    // render(h(VueComponent), app);
+    const VueComponent = {
+      setup() {
+        const a = ref(1);
+        setTimeout(() => {
+          a.value = 2;
+        }, 1000);
+        return {
+          a
+        }
+        // return () => h('div', a.value);
+        // return () => h(Fragment, [
+        //   h('button', {onClick: () => { a.value++ }}, '+++'),
+        //   h('div', a.value)
+        // ]);
+      },
+      // 相当于html模版
+      render(proxy) {
+        debugger
+        // return h('div', proxy.a);
+        return h(Fragment, [
+          h('button', {onClick: () => { proxy.a++ }}, '+++'),
+          h('div', proxy.a)
+        ])
+      }
+    };
+    render(h(VueComponent), app);
 
 
     // 插槽

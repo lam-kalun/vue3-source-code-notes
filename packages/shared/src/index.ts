@@ -17,4 +17,10 @@ export const isString = (value) => {
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 export const hasOwn = (val, key) => hasOwnProperty.call(val, key);
 
-export * from './shapeFlags'
+// 把value变为字符串
+export const toDisplayString = (value) => {
+  return isString(value) ? value : value == null ? '' : isObject(value) ? JSON.stringify(value) : String(value);
+};
+
+export * from './shapeFlags';
+export * from './patchFlag';

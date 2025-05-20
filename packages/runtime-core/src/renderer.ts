@@ -1,4 +1,4 @@
-import { hasOwn, ShapeFlags } from "@vue/shared";
+import { hasOwn, PatchFlags, ShapeFlags } from "@vue/shared";
 import { Fragment, isSameVNodeType, normalizeVNode, Text } from "./vnode";
 import getSequence from "./seq";
 import { isRef, ReactiveEffect } from '@vue/reactivity';
@@ -77,7 +77,7 @@ export function createRenderer(renderOptions) {
       hostSetElementText(el, children);
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       // 递归渲染
-      mountChildren(children, el, null, parentComponent);
+      mountChildren(children, el, anchor, parentComponent);
     }
     
     hostInsert(el, container, anchor);
@@ -301,7 +301,7 @@ export function createRenderer(renderOptions) {
         patchKeyedChildren(c1, c2, el, anchor, parentComponent);
       } else {
         hostSetElementText(el, '');
-        mountChildren(c2, el, null, parentComponent);    
+        mountChildren(c2, el, anchor, parentComponent);    
       }
     } else if (shapeFlag & ShapeFlags.ELEMENT) {
       // 新的是文本
@@ -313,29 +313,53 @@ export function createRenderer(renderOptions) {
     }
   };
 
+  // 比较有标记动态节点的vNode的children
+  const patchBlockChildren = (oldChildren, newChildren, fallbackContainer, parentComponent) => {
+    for (let i = 0; i < newChildren.length; i++) {
+      const oldVNode = oldChildren[i];
+      const newVNode = newChildren[i];
+      patch(oldVNode, newVNode, fallbackContainer, null, parentComponent, true);
+    }
+  };
+
   // 比较相同元素节点的差异
-  const patchElement = (n1, n2, parentComponent) => {
+  const patchElement = (n1, n2, parentComponent, optimized) => {
     // 复用dom元素
     const el = n2.el = n1.el;
+    const { patchFlag, dynamicChildren } = n2;
+    if (dynamicChildren) {
+      patchBlockChildren(n1.dynamicChildren!, dynamicChildren, el, parentComponent);
+    }
+    // optimized = !!n2.dynamicChildren，有dynamicChildren说明有分静态、动态儿子节点，当然不用全部patch
+    else if (!optimized) {
+      patchChildren(n1, n2, el, null, parentComponent);
+      n2.children = n1.children;
+    }
 
     // 比较属性
-    const oldProps = n1.props || {};
-    const newProps = n2.props || {};
-    // hostPatchProp 只能针对一个属性来处理
-    patchProps(oldProps, newProps, el);
-    n2.props = n1.props;
-
-    patchChildren(n1, n2, el, null, parentComponent);
-    n2.children = n1.children;
+    if (patchFlag > 0) {
+      if (patchFlag & PatchFlags.TEXT) {
+        if (n1.children !== n2.children) {
+          hostSetElementText(el, n2.children);
+        }
+      }
+      // todo 其他属性
+    } else {
+      const oldProps = n1.props || {};
+      const newProps = n2.props || {};
+      // hostPatchProp 只能针对一个属性来处理
+      patchProps(oldProps, newProps, el);
+      n2.props = n1.props;
+    }
   };
 
   // 处理元素
-  const processElement = (n1, n2, container, anchor, parentComponent) => {
+  const processElement = (n1, n2, container, anchor, parentComponent, optimized) => {
     // 初始化
     if (n1 === null) {
       mountElement(n2, container, anchor, parentComponent);
     } else {
-      patchElement(n1, n2, parentComponent);
+      patchElement(n1, n2, parentComponent, optimized);
     }
   };
 
@@ -358,9 +382,9 @@ export function createRenderer(renderOptions) {
       // n2.children肯定是数组
       // 和processElement、processText相比，不会创建n2.type的节点，所以少了给n2.el赋值，Fragment的vNode没有el
       // 正常mountChildren的container入参是根据n2.type创建的节点，再把根据n2.type创建的节点放入render的container，这里直接是把children放入render的container
-      mountChildren(n2.children, container, null, parentComponent);
+      mountChildren(n2.children, container, anchor, parentComponent);
     } else {
-      patchChildren(n1, n2, container, null, parentComponent);
+      patchChildren(n1, n2, container, anchor, parentComponent);
     }
   };
 
@@ -561,7 +585,7 @@ export function createRenderer(renderOptions) {
     container：装载的容器
     渲染走这里，更新也走这里
   */
-  const patch = (n1, n2, container, anchor?, parentComponent?) => {
+  const patch = (n1, n2, container, anchor?, parentComponent?, optimized = !!n2.dynamicChildren) => {
     // 两次渲染同一个元素跳过即可
     if (n1 === n2) {
       return;
@@ -587,7 +611,7 @@ export function createRenderer(renderOptions) {
       default:
         // 元素
         if (shapeFlag & ShapeFlags.ELEMENT) {
-          processElement(n1, n2, container, anchor, parentComponent);
+          processElement(n1, n2, container, anchor, parentComponent, optimized);
         }
         // 组件
         else if (shapeFlag & ShapeFlags.COMPONENT) {

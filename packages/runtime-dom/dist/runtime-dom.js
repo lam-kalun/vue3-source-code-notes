@@ -109,6 +109,41 @@ function patchProp(el, key, prevValue, nextValue) {
   }
 }
 
+// packages/shared/src/shapeFlags.ts
+var ShapeFlags = /* @__PURE__ */ ((ShapeFlags2) => {
+  ShapeFlags2[ShapeFlags2["ELEMENT"] = 1] = "ELEMENT";
+  ShapeFlags2[ShapeFlags2["FUNCTIONAL_COMPONENT"] = 2] = "FUNCTIONAL_COMPONENT";
+  ShapeFlags2[ShapeFlags2["STATEFUL_COMPONENT"] = 4] = "STATEFUL_COMPONENT";
+  ShapeFlags2[ShapeFlags2["TEXT_CHILDREN"] = 8] = "TEXT_CHILDREN";
+  ShapeFlags2[ShapeFlags2["ARRAY_CHILDREN"] = 16] = "ARRAY_CHILDREN";
+  ShapeFlags2[ShapeFlags2["SLOTS_CHILDREN"] = 32] = "SLOTS_CHILDREN";
+  ShapeFlags2[ShapeFlags2["TELEPORT"] = 64] = "TELEPORT";
+  ShapeFlags2[ShapeFlags2["SUSPENSE"] = 128] = "SUSPENSE";
+  ShapeFlags2[ShapeFlags2["COMPONENT_SHOULD_KEEP_ALIVE"] = 256] = "COMPONENT_SHOULD_KEEP_ALIVE";
+  ShapeFlags2[ShapeFlags2["COMPONENT_KEPT_ALIVE"] = 512] = "COMPONENT_KEPT_ALIVE";
+  ShapeFlags2[ShapeFlags2["COMPONENT"] = 6] = "COMPONENT";
+  return ShapeFlags2;
+})(ShapeFlags || {});
+
+// packages/shared/src/patchFlag.ts
+var PatchFlags = /* @__PURE__ */ ((PatchFlags2) => {
+  PatchFlags2[PatchFlags2["TEXT"] = 1] = "TEXT";
+  PatchFlags2[PatchFlags2["CLASS"] = 2] = "CLASS";
+  PatchFlags2[PatchFlags2["STYLE"] = 4] = "STYLE";
+  PatchFlags2[PatchFlags2["PROPS"] = 8] = "PROPS";
+  PatchFlags2[PatchFlags2["FULL_PROPS"] = 16] = "FULL_PROPS";
+  PatchFlags2[PatchFlags2["NEED_HYDRATION"] = 32] = "NEED_HYDRATION";
+  PatchFlags2[PatchFlags2["STABLE_FRAGMENT"] = 64] = "STABLE_FRAGMENT";
+  PatchFlags2[PatchFlags2["KEYED_FRAGMENT"] = 128] = "KEYED_FRAGMENT";
+  PatchFlags2[PatchFlags2["UNKEYED_FRAGMENT"] = 256] = "UNKEYED_FRAGMENT";
+  PatchFlags2[PatchFlags2["NEED_PATCH"] = 512] = "NEED_PATCH";
+  PatchFlags2[PatchFlags2["DYNAMIC_SLOTS"] = 1024] = "DYNAMIC_SLOTS";
+  PatchFlags2[PatchFlags2["DEV_ROOT_FRAGMENT"] = 2048] = "DEV_ROOT_FRAGMENT";
+  PatchFlags2[PatchFlags2["CACHED"] = -1] = "CACHED";
+  PatchFlags2[PatchFlags2["BAIL"] = -2] = "BAIL";
+  return PatchFlags2;
+})(PatchFlags || {});
+
 // packages/shared/src/index.ts
 var isObject = (value) => {
   return typeof value === "object" && value !== null;
@@ -124,11 +159,14 @@ var isString = (value) => {
 };
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 var hasOwn = (val, key) => hasOwnProperty.call(val, key);
+var toDisplayString = (value) => {
+  return isString(value) ? value : value == null ? "" : isObject(value) ? JSON.stringify(value) : String(value);
+};
 
 // packages/runtime-core/src/vnode.ts
 var Text = Symbol.for("Text");
 var Fragment = Symbol.for("Fragment");
-function createVNode(type, props, children) {
+function createVNode(type, props, children, patchFlag = 0, isBlockNode = false) {
   const shapeFlag = isString(type) ? 1 /* ELEMENT */ : isTeleport(type) ? 64 /* TELEPORT */ : isObject(type) ? 4 /* STATEFUL_COMPONENT */ : 0;
   const vNode = {
     __v_isVNode: true,
@@ -138,8 +176,14 @@ function createVNode(type, props, children) {
     shapeFlag,
     el: null,
     key: props?.key || null,
-    ref: props?.ref || null
+    ref: props?.ref || null,
+    patchFlag,
+    dynamicChildren: null
   };
+  if (currentBlock && // 避免区块节点追踪自身
+  !isBlockNode && patchFlag > 0) {
+    currentBlock.push(vNode);
+  }
   if (children) {
     if (Array.isArray(children)) {
       vNode.shapeFlag |= 16 /* ARRAY_CHILDREN */;
@@ -169,6 +213,21 @@ function normalizeVNode(child) {
   } else if (typeof child === "string" || typeof child === "number") {
     return createVNode(Text, null, String(child));
   }
+}
+var currentBlock = null;
+function openBlock() {
+  currentBlock = [];
+}
+function closeBlock() {
+  currentBlock = null;
+}
+function setupBlock(vNode) {
+  vNode.dynamicChildren = currentBlock;
+  closeBlock();
+  return vNode;
+}
+function createElementBlock(type, props, children, patchFlag) {
+  return setupBlock(createVNode(type, props, children, patchFlag, true));
 }
 
 // packages/runtime-core/src/seq.ts
@@ -863,7 +922,7 @@ function createRenderer(renderOptions2) {
     if (shapeFlag & 8 /* TEXT_CHILDREN */) {
       hostSetElementText(el, children);
     } else if (shapeFlag & 16 /* ARRAY_CHILDREN */) {
-      mountChildren(children, el, null, parentComponent);
+      mountChildren(children, el, anchor, parentComponent);
     }
     hostInsert(el, container, anchor);
   };
@@ -973,7 +1032,7 @@ function createRenderer(renderOptions2) {
         patchKeyedChildren(c1, c2, el, anchor, parentComponent);
       } else {
         hostSetElementText(el, "");
-        mountChildren(c2, el, null, parentComponent);
+        mountChildren(c2, el, anchor, parentComponent);
       }
     } else if (shapeFlag & 1 /* ELEMENT */) {
       if (prevShapeFlag & 16 /* ARRAY_CHILDREN */) {
@@ -983,20 +1042,40 @@ function createRenderer(renderOptions2) {
       }
     }
   };
-  const patchElement = (n1, n2, parentComponent) => {
-    const el = n2.el = n1.el;
-    const oldProps = n1.props || {};
-    const newProps = n2.props || {};
-    patchProps(oldProps, newProps, el);
-    n2.props = n1.props;
-    patchChildren(n1, n2, el, null, parentComponent);
-    n2.children = n1.children;
+  const patchBlockChildren = (oldChildren, newChildren, fallbackContainer, parentComponent) => {
+    for (let i = 0; i < newChildren.length; i++) {
+      const oldVNode = oldChildren[i];
+      const newVNode = newChildren[i];
+      patch(oldVNode, newVNode, fallbackContainer, null, parentComponent, true);
+    }
   };
-  const processElement = (n1, n2, container, anchor, parentComponent) => {
+  const patchElement = (n1, n2, parentComponent, optimized) => {
+    const el = n2.el = n1.el;
+    const { patchFlag, dynamicChildren } = n2;
+    if (dynamicChildren) {
+      patchBlockChildren(n1.dynamicChildren, dynamicChildren, el, parentComponent);
+    } else if (!optimized) {
+      patchChildren(n1, n2, el, null, parentComponent);
+      n2.children = n1.children;
+    }
+    if (patchFlag > 0) {
+      if (patchFlag & 1 /* TEXT */) {
+        if (n1.children !== n2.children) {
+          hostSetElementText(el, n2.children);
+        }
+      }
+    } else {
+      const oldProps = n1.props || {};
+      const newProps = n2.props || {};
+      patchProps(oldProps, newProps, el);
+      n2.props = n1.props;
+    }
+  };
+  const processElement = (n1, n2, container, anchor, parentComponent, optimized) => {
     if (n1 === null) {
       mountElement(n2, container, anchor, parentComponent);
     } else {
-      patchElement(n1, n2, parentComponent);
+      patchElement(n1, n2, parentComponent, optimized);
     }
   };
   const processText = (n1, n2, container, anchor) => {
@@ -1011,9 +1090,9 @@ function createRenderer(renderOptions2) {
   };
   const processFragment = (n1, n2, container, anchor, parentComponent) => {
     if (n1 == null) {
-      mountChildren(n2.children, container, null, parentComponent);
+      mountChildren(n2.children, container, anchor, parentComponent);
     } else {
-      patchChildren(n1, n2, container, null, parentComponent);
+      patchChildren(n1, n2, container, anchor, parentComponent);
     }
   };
   const hasPropsChanged = (prevProps, nextProps) => {
@@ -1144,7 +1223,7 @@ function createRenderer(renderOptions2) {
     mc: mountChildren,
     pc: patchChildren
   };
-  const patch = (n1, n2, container, anchor, parentComponent) => {
+  const patch = (n1, n2, container, anchor, parentComponent, optimized = !!n2.dynamicChildren) => {
     if (n1 === n2) {
       return;
     }
@@ -1163,7 +1242,7 @@ function createRenderer(renderOptions2) {
         break;
       default:
         if (shapeFlag & 1 /* ELEMENT */) {
-          processElement(n1, n2, container, anchor, parentComponent);
+          processElement(n1, n2, container, anchor, parentComponent, optimized);
         } else if (shapeFlag & 6 /* COMPONENT */) {
           processComponent(n1, n2, container, anchor, parentComponent);
         } else if (shapeFlag & 64 /* TELEPORT */) {
@@ -1354,12 +1433,17 @@ var render = (vNode, container) => {
 };
 export {
   Fragment,
+  PatchFlags,
   ReactiveEffect,
+  ShapeFlags,
   Teleport,
   Text,
   activeEffect,
+  closeBlock,
   computed,
   createComponentInstance,
+  createElementBlock,
+  createVNode as createElementVNode,
   createRenderer,
   createVNode,
   currentInstance,
@@ -1367,11 +1451,16 @@ export {
   effect,
   getCurrentInstance,
   h,
+  hasOwn,
   inject,
   invokeArray,
+  isFunction,
+  isNumber,
+  isObject,
   isReactive,
   isRef,
   isSameVNodeType,
+  isString,
   isTeleport,
   isVNode,
   normalizeVNode,
@@ -1379,6 +1468,7 @@ export {
   onBeforeUpdate,
   onMounted,
   onUpdated,
+  openBlock,
   provide,
   proxyRefs,
   reactive,
@@ -1386,7 +1476,9 @@ export {
   render,
   renderOptions,
   setCurrentInstance,
+  setupBlock,
   setupComponent,
+  toDisplayString,
   toReactive,
   toRef,
   toRefs,
