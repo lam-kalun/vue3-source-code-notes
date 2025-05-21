@@ -20,34 +20,34 @@
       // } from "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js";
       } from "./runtime-dom.js";
 
-      const MyComponent = {
-        setup() {
-          const state = reactive({
-            name: '我出现了'
-          });
-          setTimeout(() => {
-            state.name = '我更新了';
-          }, 1000);
-          return {
-            ...toRefs(state)
-          }
-        },
-        render(_ctx, _cache, $props, $setup, $data, $options) {
-          return (
-            _openBlock(),
-            _createElementBlock("div", null, [
-              _createElementVNode("span", null, "我是不动的"),
-              _createElementVNode(
-                "h1",
-                null,
-                _toDisplayString(_ctx.name),
-                1 /* TEXT */
-              ),
-            ])
-          );
-        }
-      };
-      render(h(MyComponent), app);
+      // const MyComponent = {
+      //   setup() {
+      //     const state = reactive({
+      //       name: '我出现了'
+      //     });
+      //     setTimeout(() => {
+      //       state.name = '我更新了';
+      //     }, 1000);
+      //     return {
+      //       ...toRefs(state)
+      //     }
+      //   },
+      //   render(_ctx, _cache, $props, $setup, $data, $options) {
+      //     return (
+      //       _openBlock(),
+      //       _createElementBlock("div", null, [
+      //         _createElementVNode("span", null, "我是不动的"),
+      //         _createElementVNode(
+      //           "h1",
+      //           null,
+      //           _toDisplayString(_ctx.name),
+      //           1 /* TEXT */
+      //         ),
+      //       ])
+      //     );
+      //   }
+      // };
+      // render(h(MyComponent), app);
 
 
       // 走else if (!optimized)的例子
@@ -75,6 +75,63 @@
       // setTimeout(() => {
       //   render(_createElementVNode("div", null, "Big Hello World"), app);
       // }, 1000);
+
+
+      // root元素下，儿子不是动态节点，孙子才是
+      // 会把孙子节点，放进root元素的dynamicChildren里，
+      // 虚拟节点生成顺序为MyComponent -> span(孙子) -> p(儿子) -> div(root)
+      const MyComponent = {
+        setup() {
+          const state = reactive({
+            name: '你是孙子'
+          });
+          return {
+            ...toRefs(state)
+          }
+        },
+        render(_ctx, _cache, $props, $setup, $data, $options) {
+          const vNode = (_openBlock(), _createElementBlock("div", null, [
+            _createElementVNode("p", null, [
+              _createElementVNode("span", null, _toDisplayString(_ctx.name), 1 /* TEXT */)
+            ])
+          ]));
+          return vNode;
+        }
+      };
+      render(h(MyComponent), app);
+
+
+      // v-if情况（if、else、for都会产生一个block）
+      // todo 把if/else的元素当成block，然后放进root元素(div)的dynamicChildren里
+      // 会把if/else的元素当成block，然后放进root元素(div)的dynamicChildren里，if/else的元素下的span元素，放进if/else的元素的dynamicChildren里，
+      // 不会放进root元素(div)的dynamicChildren里(因为if/else的元素也开启了一个currentBlock，if/else的元素下的span元素，生成虚拟节点时，存进了if/else的元素的dynamicChildren里)
+      // const MyComponent = {
+      //   setup() {
+      //     const state = reactive({
+      //       flag: true,
+      //       name: '我出现了'
+      //     });
+      //     setTimeout(() => {
+      //       state.flag = false;
+      //       state.name = '我更新了';
+      //     }, 2000);
+      //     return {
+      //       ...toRefs(state)
+      //     }
+      //   },
+      //   render(_ctx, _cache, $props, $setup, $data, $options) {
+      //     return (_openBlock(), _createElementBlock("div", null, [
+      //       (_ctx.flag)
+      //         ? (_openBlock(), _createElementBlock("div", { key: 0 }, [
+      //             _createElementVNode("span", null, _toDisplayString(_ctx.name), 1 /* TEXT */)
+      //           ]))
+      //         : (_openBlock(), _createElementBlock("p", { key: 1 }, [
+      //             _createElementVNode("span", null, _toDisplayString(_ctx.name), 1 /* TEXT */)
+      //           ]))
+      //     ]));
+      //   }
+      // };
+      // render(h(MyComponent), app);
     </script>
   </body>
 </html>

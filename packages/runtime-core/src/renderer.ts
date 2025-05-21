@@ -378,6 +378,7 @@ export function createRenderer(renderOptions) {
 
   // 处理Fragment
   const processFragment = (n1, n2, container, anchor, parentComponent) => {
+    // todo 靶向更新（顺便了解为什么processComponent不用靶向更新）
     if (n1 == null) {
       // n2.children肯定是数组
       // 和processElement、processText相比，不会创建n2.type的节点，所以少了给n2.el赋值，Fragment的vNode没有el
